@@ -25,7 +25,7 @@ type session =
   | TyCase of (label * session) list
   | TyClose
   | TyWait
-  | TyDc
+  | TyDC
 
 
 (* TODO:
@@ -47,9 +47,14 @@ type name =
  * コンストラクタの postfix の Exp は付けずに。
  * *)
 
+type binOp = Plus | Mult
+
 type exp =
   | Name of name
   | Unit
+  (* integer, bool literal *)
+  | BinOp of binOp * exp * exp
+
   (* fun x:T -> e *)
   | Fun of mult * id * ty * exp
   | App of exp * exp
@@ -73,4 +78,4 @@ type proc =
   | Par of proc * proc
   (* TODO: 名前どうすればいいの？ *)
   (* Co Bind ??? *)
-  | Nu of id * id * proc
+  | NuBind of id * id * proc
