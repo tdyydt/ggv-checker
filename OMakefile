@@ -19,7 +19,7 @@
 # You will usually need to modify this file for your project.
 
 # Delete this line once you have configured this file
-eprintln($(CWD)/OMakefile is not configured)
+# eprintln($(CWD)/OMakefile is not configured)
 
 ########################################################################
 # Phony targets are scoped, so you probably want to declare them first.
@@ -106,12 +106,13 @@ eprintln($(CWD)/OMakefile is not configured)
 # OCAMLINCLUDES +=
 
 #
-# Compile native or byte code? 
+# Compile native or byte code?
 #
 # The default values are defined as follows:
 #
 # NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
 # BYTE_ENABLED = $(not $(OCAMLOPT_EXISTS))
+MENHIR_ENABLED = true
 
 #
 # Various options
@@ -129,7 +130,7 @@ eprintln($(CWD)/OMakefile is not configured)
 # Workaround for the fact that ocamldep does not pay attention to .mll
 # and .mly files.
 #
-# OCamlGeneratedFiles(parser.ml lexer.ml)
+OCamlGeneratedFiles(parser.ml lexer.ml)
 
 ################################################
 # Build an OCaml library
@@ -147,14 +148,16 @@ eprintln($(CWD)/OMakefile is not configured)
 # Build an OCaml program
 #
 
-# FILES[] =
-#    file1
-#    file2
-#
-# PROGRAM =
-# OCAML_LIBS +=
-# OCAML_CLIBS +=
-# OCAML_OTHER_LIBS +=
-# OCAML_LIB_FLAGS +=
-#
-# .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+FILES[] =
+   syntax
+   lexer
+   parser
+   main
+
+PROGRAM = tycheck
+OCAML_LIBS +=
+OCAML_CLIBS +=
+OCAML_OTHER_LIBS +=
+OCAML_LIB_FLAGS +=
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

@@ -1,10 +1,11 @@
 {
-module Parser = P
+module P = Parser
 
 let reservedWords = [
     ("lin", P.LIN);
     ("un", P.UN);
     ("unit", P.UNIT);
+    ("end", P.END);
 
     ("fun", P.FUN);
     ("let", P.LET);
@@ -16,6 +17,8 @@ let reservedWords = [
     ("case", P.CASE);
     ("close", P.CLOSE);
     ("wait", P.WAIT);
+
+    ("nu", P.NU);
   ]
 
 }
@@ -37,11 +40,14 @@ rule main = parse
 | "->" { P.RARROW }
 | ":" { P.COLON }
 | "." { P.PERIOD }
+| "," { P.COMMA }
 
 | "+" { P.PLUS }
 | "*" { P.STAR }
+| "#" { P.HASH }
 
 | "<" { P.LT }
+(* | ">" { P.GT } *)
 | "=" { P.EQ }
 
 | ['a'-'z'] ['a'-'z' '0'-'9' '_' '\'']*

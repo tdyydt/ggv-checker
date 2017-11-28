@@ -11,6 +11,8 @@ type mult = Un | Lin
 (* prefix は T だけでも十分か *)
 type ty =
   | TyUnit
+  | TyInt
+  | TyBool
   | TySession of session
   | TyFun of mult * ty * ty
   (* TyPair ??? *)
@@ -18,7 +20,7 @@ type ty =
   | TyDyn
 
 (* session types *)
-type session =
+and session =
   | TySend of ty * session
   | TyReceive of ty * session
   | TySelect of (label * session) list
@@ -43,6 +45,12 @@ type name =
   | Var of id
   | Chan of id
 
+(* konst *)
+type konst =
+  | KUnit
+  | KInt of int
+  | KBool of bool
+
 (* NOTE:
  * コンストラクタの postfix の Exp は付けずに。
  * *)
@@ -51,7 +59,8 @@ type binOp = Plus | Mult
 
 type exp =
   | Name of name
-  | Unit
+  (* | Unit *)
+  | Konst of konst
   (* integer, bool literal *)
   | BinOp of binOp * exp * exp
 
@@ -68,7 +77,7 @@ type exp =
   | Receive of exp
   | Select of label * exp
   (* FIXME: branch を置き換えよ *)
-  | Case of exp * (??? list)
+  (* | Case of exp * (??? list) *)
   | Close of exp
   | Wait of exp
 
@@ -76,6 +85,4 @@ type exp =
 type proc =
   | Exp of exp
   | Par of proc * proc
-  (* TODO: 名前どうすればいいの？ *)
-  (* Co Bind ??? *)
   | NuBind of id * id * proc
