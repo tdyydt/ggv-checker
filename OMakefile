@@ -110,8 +110,8 @@
 #
 # The default values are defined as follows:
 #
-# NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
-# BYTE_ENABLED = $(not $(OCAMLOPT_EXISTS))
+NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
+BYTE_ENABLED = $(not $(OCAMLOPT_EXISTS))
 MENHIR_ENABLED = true
 
 #
@@ -152,6 +152,7 @@ FILES[] =
    syntax
    lexer
    parser
+   typing
    main
 
 PROGRAM = tycheck

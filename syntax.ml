@@ -29,6 +29,11 @@ and session =
   | TyWait
   | TyDC
 
+let string_of_ty = function
+  | TyUnit -> "unit"
+  | TyInt -> "int"
+  | TyBool -> "bool"
+
 
 (* TODO:
  * mult という名前で良いか,
