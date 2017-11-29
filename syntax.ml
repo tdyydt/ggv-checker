@@ -3,7 +3,7 @@
 type id = string
 type label = string
 
-(* types *)
+(* types *********************************************)
 
 (* multiplicity *)
 type mult = Un | Lin
@@ -35,6 +35,8 @@ let string_of_ty = function
   | TyBool -> "bool"
 
 
+(* programs *****************************************)
+
 (* TODO:
  * mult という名前で良いか,
  * m は Fun, ConsPair のどの位置に置くか,
@@ -46,9 +48,10 @@ let string_of_ty = function
  * *)
 
 (* 区別しなくて良いかも？ *)
-type name =
-  | Var of id
-  | Chan of id
+(* type name =
+ *   | Var of id
+ *   | Chan of id *)
+(* パースの時に区別する術がない *)
 
 (* konst *)
 type konst =
@@ -63,7 +66,7 @@ type konst =
 type binOp = Plus | Mult
 
 type exp =
-  | Name of name
+  | Var of id
   (* | Unit *)
   | Konst of konst
   (* integer, bool literal *)

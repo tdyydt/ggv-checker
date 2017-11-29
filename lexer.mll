@@ -7,6 +7,9 @@ let reservedWords = [
     ("unit", P.UNIT);
     ("end", P.END);
 
+    ("true", P.TRUE);
+    ("false", P.FALSE);
+
     ("fun", P.FUN);
     ("let", P.LET);
     ("fork", P.FORK);
@@ -30,6 +33,8 @@ rule main = parse
 (* integer literal *)
 | "-"? ['0'-'9']+
     { P.INTV (int_of_string (Lexing.lexeme lexbuf)) }
+
+| ";;" { P.SEMISEMI }
 
 | "(" { P.LPAREN }
 | ")" { P.RPAREN }

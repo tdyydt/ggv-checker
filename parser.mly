@@ -2,6 +2,7 @@
 open Syntax
 %}
 
+%token SEMISEMI
 %token LPAREN RPAREN
 %token LBRACE RBRACE
 %token PLUS LT
@@ -10,7 +11,7 @@ open Syntax
 %token LIN UN
 %token UNIT
 
-/* pling & question */
+/* pling! & question? */
 %token PL QU
 %token END
 %token PERIOD COMMA
@@ -24,6 +25,10 @@ open Syntax
 %token NU
 %token VBAR
 
+/* TODO:
+結合と、優先度
+*/
+
 %token <int> INTV
 %token <Syntax.id> ID
 
@@ -33,7 +38,7 @@ open Syntax
 %%
 
 toplevel :
-  | p=proc { p }
+  | p=proc SEMISEMI { p }
 
 proc :
 /* <e> はやめておく */
@@ -43,9 +48,10 @@ proc :
 
 expr :
 /*  | FUN i=ID t=ty_annot RARROW e=expr { Fun(m,i,t,e) } */
-  | e1=expr e2=expr { App(e1,e2) }
+  | e1=simple_expr e2=simple_expr { App(e1,e2) }
 /* multのつけ場所 */
 /*  | LPAREN e1=expr COMMA e2=expr RPAREN { ConsPair(m,e1,e2) } */
+/* 型注釈なし？要調査 */
   | LET x=ID t1=ty_annot COMMA y=ID t2=ty_annot EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
   | FORK e=expr { Fork(e) }
   | NEW { New }
@@ -56,10 +62,29 @@ expr :
   | CLOSE e=expr { Close(e) }
   | WAIT e=expr { Wait(e) }
 
+  | e1=expr STAR e2=expr { BinOp(Mult, e1, e2) }
+  | e1=expr PLUS e2=expr { BinOp(Plus, e1, e2) }
+  | e=simple_expr { e }
+
+/* aexpr と同じ */
+simple_expr :
+  | LPAREN RPAREN { Konst KUnit }
+  | v=INTV { Konst (KInt v) }
+  | TRUE { Konst (KBool true) }
+  | FALSE { Konst (KBool false) }
+  | x=ID { Var x }
+  | Lparen e=expr RPAREN { e }
+
+
 
 /* type annotation */
 ty_annot :
   | COLON t=ty { t }
+
+/* TODO:
+型の文法でも
+() とか考えないといけない
+*/
 
 ty :
   | UNIT { TyUnit }
