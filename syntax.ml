@@ -3,12 +3,13 @@
 type id = string
 type label = string
 
-(* types *********************************************)
+(* Types *********************************************)
 
 (* multiplicity *)
 type mult = Un | Lin
 
 (* prefix は T だけでも十分か *)
+(* mutual recursive types *)
 type ty =
   | TyUnit
   | TyInt
@@ -35,7 +36,7 @@ let string_of_ty = function
   | TyBool -> "bool"
 
 
-(* programs *****************************************)
+(* Programs *****************************************)
 
 (* TODO:
  * mult という名前で良いか,
@@ -47,12 +48,6 @@ let string_of_ty = function
  * with_position
  * *)
 
-(* 区別しなくて良いかも？ *)
-(* type name =
- *   | Var of id
- *   | Chan of id *)
-(* パースの時に区別する術がない *)
-
 (* konst *)
 type konst =
   | KUnit
@@ -61,6 +56,7 @@ type konst =
 
 (* NOTE:
  * コンストラクタの postfix の Exp は付けずに。
+ * 代わりに prefix=E もありえる
  * *)
 
 type binOp = Plus | Mult
@@ -73,6 +69,7 @@ type exp =
   | BinOp of binOp * exp * exp
 
   (* fun x:T -> e *)
+  (* 規則では Abs *)
   | Fun of mult * id * ty * exp
   | App of exp * exp
   | ConsPair of mult * exp * exp
