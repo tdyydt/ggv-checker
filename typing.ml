@@ -42,12 +42,6 @@ let matching_receive = function
   | (TySession TyDC | TyDyn) -> TySession (TyReceive (TyDyn, TyDC))
   | _ -> ty_err "matching error: receive"
 
-
-(* let matching_receive = function
- *   | TySession (TyReceive (t,s)) as ty -> ty
- *   | (TySession TyDC | TyDyn) -> todo ()
- *   | _ -> ty_err "matching error: receive" *)
-
 let matching_select = function
   | TySession (TySelect _) as ty -> ty
   (* ラベル li と、添字集合 I の選び方？ *)
@@ -75,8 +69,10 @@ let matching_wait = function
 (* 型付けに用いた linear 変数の集合を返す。 *)
 (* tyenv -> exp -> ty *)
 let rec ty_exp tyenv = function
-  (* | Var x -> not_implement *)
-  | Konst KUnit -> TyUnit
+  | Var x -> todo ()
+  | Konst KUnit ->
+     if un tyenv then TyUnit
+     else ty_err "linearity error"
   | Konst (KInt _) -> TyInt
   | Konst (KBool _) -> TyBool
 

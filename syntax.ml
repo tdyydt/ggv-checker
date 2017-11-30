@@ -43,6 +43,57 @@ let string_of_ty = function
   | TyBool -> "bool"
 
 
+(* subtyping *)
+(* multiplicity order *)
+(* <= でも良い気もする。 *)
+let sub_mult m n = match m,n with
+  | Un, _ -> true
+  | Lin, Lin -> true
+  | Lin, Un -> false
+
+
+(* consistent subtyping *)
+(* ty -> ty -> bool *)
+(* let rec (<~) t u = match t,u with *)
+let rec con_sub_ty t u = match t,u with
+  (* | TyBase x, TyBase y when x = y -> true *)
+  | TyUnit, TyUnit -> true
+  | TyInt, TyInt -> true
+  | TyBool, TyBool -> true
+  | TySession s, TySession r -> con_sub_session s r
+  | TyFun (m,t1,u1), TyFun (n,t2,u2) ->
+     con_sub_ty t2 t1
+     && con_sub_ty u1 u2
+     && sub_mult m n
+  | TyProd (m,t1,u1), TyProd (n,t2,u2) ->
+     con_sub_ty t1 t2
+     && con_sub_ty u1 u2
+     && sub_mult m n
+  | TyDyn, _ -> true
+  | _, TyDyn -> true
+
+  (* そもそも、t,uのコンストラクタが異なる等 *)
+  | _ -> false
+
+(* session -> session -> bool *)
+and con_sub_session s r = match s,r with
+  | TySend (t1,s1), TySend (t2,s2) ->
+     con_sub_ty t2 t1
+     && con_sub_session s1 s2
+  | TyReceive (t1,s1), TyReceive (t2,s2) ->
+     con_sub_ty t1 t2
+     && con_sub_session s1 s2
+  (* TODO: select,case が考えないといけない *)
+  | TySelect _, TySelect _ -> todo ()
+  | TyCase _, TyCase _ -> todo ()
+  | TyClose, TyClose -> true
+  | TyWait, TyWait -> true
+  | TyDC, _ -> true
+  | _, TyDC -> true
+  | _ -> false
+
+
+
 (* Programs *****************************************)
 
 (* TODO:
@@ -98,53 +149,3 @@ type proc =
   | Exp of exp
   | Par of proc * proc
   | NuBind of id * id * proc
-
-
-(* subtyping *)
-(* multiplicity order *)
-(* <= でも良い気もする。 *)
-let sub_mult m n = match m,n with
-  | Un, _ -> true
-  | Lin, Lin -> true
-  | Lin, Un -> false
-
-
-(* consistent subtyping *)
-(* ty -> ty -> bool *)
-(* let rec (<~) t u = match t,u with *)
-let rec con_sub_ty t u = match t,u with
-  (* | TyBase x, TyBase y when x = y -> true *)
-  | TyUnit, TyUnit -> true
-  | TyInt, TyInt -> true
-  | TyBool, TyBool -> true
-  | TySession s, TySession r -> con_sub_session s r
-  | TyFun (m,t1,u1), TyFun (n,t2,u2) ->
-     con_sub_ty t2 t1
-     && con_sub_ty u1 u2
-     && sub_mult m n
-  | TyProd (m,t1,u1), TyProd (n,t2,u2) ->
-     con_sub_ty t1 t2
-     && con_sub_ty u1 u2
-     && sub_mult m n
-  | TyDyn, _ -> true
-  | _, TyDyn -> true
-
-  (* そもそも、t,uのコンストラクタが異なる等 *)
-  | _ -> false
-
-(* session -> session -> bool *)
-and con_sub_session s r = match s,r with
-  | TySend (t1,s1), TySend (t2,s2) ->
-     con_sub_ty t2 t1
-     && con_sub_session s1 s2
-  | TyReveive (t1,s1), TySession (t2,s2) ->
-     con_sub_ty t1 t2
-     && con_sub_session s1 s2
-  (* TODO: select,case が考えないといけない *)
-  | TySelect _, TySelect _ -> todo ()
-  | TyCase _, TyCase _ -> todo ()
-  | TyClose, TyClose -> true
-  | TyWait, TyWait -> true
-  | TyDC, _ -> true
-  | _, TyDC -> true
-  | _ -> false

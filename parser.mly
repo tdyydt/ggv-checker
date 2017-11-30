@@ -53,16 +53,18 @@ expr :
   | e1=simple_expr e2=simple_expr { App(e1,e2) }
 /* multのつけ場所 */
 /*  | LPAREN e1=expr COMMA e2=expr RPAREN { ConsPair(m,e1,e2) } */
-/* 型注釈なし？要調査 */
+/* 型注釈なし？要調査
+   注釈が無かったら、推論しないと行けないのは、確かでは？
+   */
   | LET x=ID t1=ty_annot COMMA y=ID t2=ty_annot EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
-  | FORK e=expr { Fork(e) }
+  | FORK e=expr { Fork e }
   | NEW { New }
   | SEND e=expr f=expr { Send(e,f) }
   | RECEIVE e=expr { Receive(e) }
   | SELECT l=ID e=expr { Select(l,e) }
 /*  | CASE e=expr OF ... */
-  | CLOSE e=expr { Close(e) }
-  | WAIT e=expr { Wait(e) }
+  | CLOSE e=expr { Close e }
+  | WAIT e=expr { Wait e }
 
   | e1=expr STAR e2=expr { BinOp(Mult, e1, e2) }
   | e1=expr PLUS e2=expr { BinOp(Plus, e1, e2) }
@@ -100,8 +102,8 @@ session :
   | PL t=ty PERIOD s=session { TySend(t,s) }
   | QU t=ty PERIOD s=session { TyReceive(t,s) }
 /*
-  | PLUS LBRACE br=branches RBRACE { TySelect(br) }
-  | AMP LBRACE br=branches RBRACE { TyCase(br) }
+  | PLUS LBRACE br=branches RBRACE { TySelect br }
+  | AMP LBRACE br=branches RBRACE { TyCase br }
 */
   | END PL { TyClose }
   | END QU { TyWait }
