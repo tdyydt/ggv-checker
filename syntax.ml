@@ -43,9 +43,30 @@ let string_of_ty = function
   | TyBool -> "bool"
 
 
-(* subtyping *)
+(* duality *)
+(* ty じゃなくて、session だけで呈される。 *)
+let dual = todo ()
+
+let mult_of_ty = function
+  | TyUnit -> Un
+  | TyInt -> Un
+  | TyBool -> Un
+  | TySession _ -> Lin          (* includes TyDC *)
+  | TyFun (m, _, _) -> m
+  | TyProd (m, _, _) -> m
+  | TyDyn -> Un
+
+
+(* check if m(tyenv) holds *)
+(* TODO: better name ?? *)
+let mult_tyenv m tyenv =
+  (* tyenv から tys だけ取り出す。 *)
+  let tys = todo () in
+  List.for_all (fun t -> mult_of_ty t = m) tys
+
 (* multiplicity order *)
 (* <= でも良い気もする。 *)
+(* m <: n *)
 let sub_mult m n = match m,n with
   | Un, _ -> true
   | Lin, Lin -> true
