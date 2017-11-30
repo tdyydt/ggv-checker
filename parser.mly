@@ -5,8 +5,10 @@ open Syntax
 %token SEMISEMI
 %token LPAREN RPAREN
 %token LBRACE RBRACE
+
 %token PLUS LT
 %token STAR HASH
+%token TRUE FALSE
 
 %token LIN UN
 %token UNIT
@@ -73,7 +75,7 @@ simple_expr :
   | TRUE { Konst (KBool true) }
   | FALSE { Konst (KBool false) }
   | x=ID { Var x }
-  | Lparen e=expr RPAREN { e }
+  | LPAREN e=expr RPAREN { e }
 
 
 
