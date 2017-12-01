@@ -61,12 +61,22 @@ let lin ty = mult_of_ty ty = Lin
 (* let un ty = not (lin ty) *)
 let un ty = mult_of_ty ty = Un
 
-(* check if m(tyenv) holds *)
+
 (* TODO: better name ?? *)
-let mult_tyenv m tyenv =
+(* let mult_tyenv m tyenv =
+ *   (\* tyenv から tys だけ取り出す。 *\)
+ *   let tys = todo () in
+ *   List.for_all (fun t -> mult_of_ty t = m) tys *)
+
+(* check if m(tyenv) holds *)
+let un_tyenv tyenv =
   (* tyenv から tys だけ取り出す。 *)
   let tys = todo () in
-  List.for_all (fun t -> mult_of_ty t = m) tys
+  List.for_all un tys
+
+let lin_tyenv tyenv =
+  let tys = todo () in
+  List.for_all lin tys
 
 (* multiplicity order *)
 (* <= でも良い気もする。 *)
