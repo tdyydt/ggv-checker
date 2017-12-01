@@ -56,6 +56,10 @@ let mult_of_ty = function
   | TyProd (m, _, _) -> m
   | TyDyn -> Un
 
+(* m(T) *)
+let lin ty = mult_of_ty ty = Lin
+(* let un ty = not (lin ty) *)
+let un ty = mult_of_ty ty = Un
 
 (* check if m(tyenv) holds *)
 (* TODO: better name ?? *)

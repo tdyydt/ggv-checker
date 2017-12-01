@@ -129,7 +129,7 @@ let rec ty_exp tyenv = function
      let t1, vars1 = ty_exp tyenv e1 in
      let t2, vars2 = ty_exp tyenv e2 in
      (* assert_disjoint vars1 vars2 *)
-     if mult_of_ty t1 = Un && mult_of_ty t2 = Un
+     if un t1 && un t2
      then (TyProd (Un,t1,t2), vars1 @@ vars2)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
@@ -163,7 +163,7 @@ let rec ty_exp tyenv = function
      end
 
   | Receive e -> todo ()
-  | Select l e -> todo ()
+  | Select (l,e) -> todo ()
   (* | Case ??? -> todo () *)
   | Close e -> todo ()
   | Wait e -> todo ()
