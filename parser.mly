@@ -11,7 +11,7 @@ open Syntax
 %token TRUE FALSE
 
 %token LIN UN
-%token UNIT
+%token UNIT INT BOOL
 
 (* pling! & question? *)
 %token PL QU
@@ -29,6 +29,11 @@ open Syntax
 
 (* TODO:
  * 結合と、優先度 *)
+(* associativity & precedence *)
+(* lowest to highest *)
+(* %left PLUS
+ * %left STAR *)
+(* STARって2通りの意味がある。 *)
 
 %token <int> INTV
 %token <Syntax.id> ID
@@ -42,34 +47,40 @@ toplevel :
   | p=proc SEMISEMI { p }
 
 proc :
-(* <e> はやめておく *)
-  | e=expr  { Exp e }
-  | p=proc VBAR q=proc { Par(p,q) }
+  | p=primary_proc VBAR q=primary_proc { Par(p,q) }
+    (* (nu c,d) P | Q
+     * カッコを付けたい*)
   | LPAREN NU c=ID COMMA d=ID RPAREN p=proc { NuBind(c,d,p) }
+  | p=primary_proc { p }
+
+primary_proc :
+  (* <e> はやめておく *)
+  | e=expr { Exp e }
+  | LPAREN p=proc RPAREN { p }
 
 expr :
-  (* | FUN i=ID t=ty_annot RARROW e=expr { Fun(m,i,t,e) }  *)
-  | e1=simple_expr e2=simple_expr { App(e1,e2) }
+  | FUN m=mult i=ID t=ty_annot RARROW e=expr { Fun(m,i,t,e) }
+  | e1=primary_expr e2=primary_expr { App(e1,e2) }
 (* multのつけ場所 *)
-  (* | LPAREN e1=expr COMMA e2=expr RPAREN { ConsPair(m,e1,e2) }  *)
+  | LPAREN e1=expr COMMA e2=expr RPAREN m=mult { ConsPair(m,e1,e2) }
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
   | LET x=ID t1=ty_annot COMMA y=ID t2=ty_annot EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
-  | FORK e=expr { Fork e }
+  | FORK e=primary_expr { Fork e }
   | NEW { New }
-  | SEND e=expr f=expr { Send(e,f) }
-  | RECEIVE e=expr { Receive(e) }
-  | SELECT l=ID e=expr { Select(l,e) }
+  | SEND e=primary_expr f=primary_expr { Send(e,f) }
+  | RECEIVE e=primary_expr { Receive e }
+  | SELECT l=ID e=primary_expr { Select(l,e) }
   (* | CASE e=expr OF ...  *)
-  | CLOSE e=expr { Close e }
-  | WAIT e=expr { Wait e }
+  | CLOSE e=primary_expr { Close e }
+  | WAIT e=primary_expr { Wait e }
 
   | e1=expr STAR e2=expr { BinOp(Mult, e1, e2) }
   | e1=expr PLUS e2=expr { BinOp(Plus, e1, e2) }
-  | e=simple_expr { e }
+  | e=primary_expr { e }
 
 (* aexpr と同じ  *)
-simple_expr :
+primary_expr :
   | LPAREN RPAREN { Konst KUnit }
   | v=INTV { Konst (KInt v) }
   | TRUE { Konst (KBool true) }
@@ -82,17 +93,19 @@ simple_expr :
 ty_annot :
   | COLON t=ty { t }
 
-(* TODO:
- * 型の文法でも
- * () とか考えないといけない *)
-
 ty :
-  | UNIT { TyUnit }
-  | s=session { TySession s }
  (* TODO: multの文法  *)
   | t1=ty RARROW m=mult t2=ty { TyFun(m,t1,t2) }
   | t1=ty STAR m=mult t2=ty { TyProd(m,t1,t2) }
+  | t=primary_ty { t }
+
+primary_ty :
+  | UNIT { TyUnit }
+  | INT { TyInt }
+  | BOOL { TyBool }
+  | s=session { TySession s }
   | STAR { TyDyn }
+  | LPAREN t=ty RPAREN { t }
 
 session :
   | PL t=ty PERIOD s=session { TySend(t,s) }
@@ -100,13 +113,20 @@ session :
 
   (* | PLUS LBRACE br=branches RBRACE { TySelect br }
    * | AMP LBRACE br=branches RBRACE { TyCase br } *)
+  | s=primary_session { s }
 
+primary_session :
   | END PL { TyClose }
   | END QU { TyWait }
- (* 候補: LPAR STAR RPAR  *)
   | HASH { TyDC }
+  | LPAREN s=session RPAREN { s }
 
-(* branches : *)
+(* branches :
+ *   | l=ID COLON s=session { (l,s) }
+ *   | separated_list (COMMA, )
+ *
+ * branch :
+ *       | *)
 
 mult :
   | UN { Un }

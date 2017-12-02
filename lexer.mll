@@ -4,7 +4,10 @@ module P = Parser
 let reservedWords = [
     ("lin", P.LIN);
     ("un", P.UN);
+
     ("unit", P.UNIT);
+    ("int", P.INT);
+    ("bool", P.BOOL);
     ("end", P.END);
 
     ("true", P.TRUE);
