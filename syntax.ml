@@ -152,7 +152,7 @@ type konst =
  * 代わりに prefix=E もありえる
  * *)
 
-type binOp = Plus | Mult
+type binOp = Plus | Mult | Lt
 
 type exp =
   | Var of id

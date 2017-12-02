@@ -149,6 +149,7 @@ OCamlGeneratedFiles(parser.ml lexer.ml)
 #
 
 FILES[] =
+   environment
    syntax
    lexer
    parser
