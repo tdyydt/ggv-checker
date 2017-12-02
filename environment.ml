@@ -1,3 +1,6 @@
+(* これで、本当に出来ているのか？
+ * TODO: mli を作る *)
+
 module M =
   Map.Make (
       struct

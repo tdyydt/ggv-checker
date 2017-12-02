@@ -1,6 +1,8 @@
 open Syntax
 module E = Environment
 
+type tyenv = ty E.t
+
 (* set of variable *)
 (* IdSet, VarSet Variables *)
 module VarSet =
@@ -116,6 +118,7 @@ let rec ty_exp tyenv = function
      if un_tyenv tyenv then (TyBool, VarSet.empty)
      else ty_err "violation of linearity"
 
+  (* TODO: fix, consider LT *)
   | BinOp (op, e1, e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
@@ -174,11 +177,13 @@ let rec ty_exp tyenv = function
      then (TyProd (Un,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
-  (* f は使わないべき？？統一性のため *)
-  | DestPair (x,t1,y,t2,e1,e2) ->
-     let t1, zs = ty_exp tyenv e1 in
+  | DestPair (x1,t1,x2,t2,e,f) ->
+     let t, ys = ty_exp tyenv e in
      (* extend (x,t1) (y,t2) in tyenv *)
-     todo ()
+     let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
+     let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+     assert_disjoint ys zs';
+     (u, VarSet.union ys zs')
 
   | Fork e ->
      let t, xs = ty_exp tyenv e in
@@ -188,7 +193,10 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | New -> todo ()
+  | New ->
+     let s = todo () in
+     (TyProd (Lin, TySession s, TySession (dual s)),
+      VarSet.empty)
 
   | Send (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
@@ -203,8 +211,36 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | Receive e -> todo ()
-  | Select (l,e) -> todo ()
+  | Receive e ->
+     let t1, xs = ty_exp tyenv e in
+     begin
+       match matching_receive t1 with
+       | TySession (TyReceive (t2,s)) ->
+          (TyProd (Lin, t2, TySession s), xs)
+       | _ -> assert false
+     end
+
+  | Select (l,e) ->
+     let t, xs = ty_exp tyenv e in
+     begin
+       match matching_select t with
+       | _ -> todo ()
+     end
+
   (* | Case ??? -> todo () *)
-  | Close e -> todo ()
-  | Wait e -> todo ()
+
+  | Close e ->
+     let t, xs = ty_exp tyenv e in
+     begin
+       match matching_close t with
+       | TySession TyClose -> (TyUnit, xs)
+       | _ -> assert false
+     end
+
+  | Wait e ->
+     let t, xs = ty_exp tyenv e in
+     begin
+       match matching_wait t with
+       | TySession TyWait -> (TyUnit, xs)
+       | _ -> assert false
+     end

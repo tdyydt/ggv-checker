@@ -44,8 +44,15 @@ let string_of_ty = function
 
 
 (* duality *)
-(* ty じゃなくて、session だけで呈される。 *)
-let dual = todo ()
+(* session -> session *)
+let rec dual = function
+  | TySend (t,s) -> TyReceive (t, dual s)
+  | TyReceive (t,s) -> TySend (t, dual s)
+  | TySelect _ -> TyCase (todo ())
+  | TyCase _ -> TySelect (todo ())
+  | TyClose -> TyWait
+  | TyWait -> TyClose
+  | TyDC -> TyDC
 
 let mult_of_ty = function
   | TyUnit -> Un
@@ -152,7 +159,7 @@ type konst =
  * 代わりに prefix=E もありえる
  * *)
 
-type binOp = Plus | Mult | Lt
+type binOp = Plus | Mult | LT
 
 type exp =
   | Var of id

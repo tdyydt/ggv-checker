@@ -1,6 +1,7 @@
 open Syntax
 open Typing
 
+(* not eval, but type check *)
 let rec read_eval_print tyenv =
   print_string "# ";
   flush stdout;
