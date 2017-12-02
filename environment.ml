@@ -22,4 +22,7 @@ let find x env = M.find x env
 
 (* env の値だけ取る
  * 型環境の型だけ *)
-let values = ()
+(* keys, values *)
+(* dom, codom(range) *)
+let values env =
+  M.fold (fun k v vs -> v :: vs) env []

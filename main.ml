@@ -18,8 +18,8 @@ let rec read_eval_print tyenv =
   (* parse error (Menhir),
    * lexer error,
    * or typing error etc. *)
-  | _ -> print_string "error";
-         print_newline ()
+  | Typing_error s -> print_string s;
+                      print_newline ()
 
 
 (* empty environment *)

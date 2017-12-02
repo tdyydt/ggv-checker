@@ -28,8 +28,8 @@ let matching_unit = function
   | TyDyn -> TyUnit
   | _ -> ty_err "matching error: unit"
 
-let matching_int = todo ()
-let matching_bool = todo ()
+let matching_int = todo
+let matching_bool = todo
 
 let matching_fun = function
   | TyFun (m,t,u) as ty -> ty
@@ -227,7 +227,7 @@ let rec ty_exp tyenv = function
        | _ -> todo ()
      end
 
-  (* | Case ??? -> todo () *)
+  (* | Case _ -> todo () *)
 
   | Close e ->
      let t, xs = ty_exp tyenv e in

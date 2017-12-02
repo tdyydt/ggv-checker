@@ -41,6 +41,7 @@ let string_of_ty = function
   | TyUnit -> "unit"
   | TyInt -> "int"
   | TyBool -> "bool"
+  | _ -> todo ()
 
 
 (* duality *)
@@ -75,14 +76,16 @@ let un ty = mult_of_ty ty = Un
  *   let tys = todo () in
  *   List.for_all (fun t -> mult_of_ty t = m) tys *)
 
+(* Env を参照する、どこで定義すべきか？？ *)
 (* check if m(tyenv) holds *)
 let un_tyenv tyenv =
   (* tyenv から tys だけ取り出す。 *)
-  let tys = todo () in
+  let tys = Environment.values tyenv in
   List.for_all un tys
 
+(* unだけで、linは使わない？ *)
 let lin_tyenv tyenv =
-  let tys = todo () in
+  let tys = Environment.values tyenv in
   List.for_all lin tys
 
 (* multiplicity order *)
