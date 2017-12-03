@@ -156,19 +156,11 @@ let rec ty_exp tyenv = function
      (* un_tyenv tyenv ?? *)
        (* or typing error *)
 
-(*
   | Fun (m,x,t,e) ->
-     let u = ty_exp (E.extend x t tyenv) e in
-     if m :> tyenv then TyFun (m,t,u)
-     else ty_err ""
- *)
-  | Fun (Lin,x,t,e) ->
      let u, ys = ty_exp (E.add x t tyenv) e in
-     (* remove x from ys, if included *)
-     (TyFun (Lin,t,u), VarSet.remove x ys)
-  | Fun (Un,x,t,e) ->
-     let u, ys = ty_exp (E.add x t tyenv) e in
-     if un_tyenv tyenv
+     (* m :> (Gamma) *)
+     if m = Lin || un_tyenv tyenv
+       (* remove x from ys, if included *)
      then (TyFun (Un,t,u), VarSet.remove x ys)
      (* gamma に入っているだけで、実際に使われているかは、言い切れない *)
      else ty_err "unrestricted functions cannot contain variables of a linear type"
@@ -188,17 +180,12 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | ConsPair (Lin,e1,e2) ->
+  | ConsPair (m,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     (TyProd (Lin,t1,t2), VarSet.union xs ys)
-
-  | ConsPair (Un,e1,e2) ->
-     let t1, xs = ty_exp tyenv e1 in
-     let t2, ys = ty_exp tyenv e2 in
-     assert_disjoint xs ys;
-     if un t1 && un t2
+     (* m :> (t1) /\ m :> (t2) *)
+     if m = Lin || (un t1 && un t2)
      then (TyProd (Un,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
