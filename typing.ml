@@ -17,6 +17,7 @@ exception Typing_error of string
 let ty_err s = raise (Typing_error s)
 
 
+(**************************************************)
 (* TODO: どのファイルに定義すべきか？
  * Syntax に移すかもしれない
  * translation 等でも使うため *)
@@ -76,6 +77,26 @@ let matching_wait = function
   | TySession TyWait as ty -> ty
   | (TySession TyDC | TyDyn) -> TySession TyWait
   | _ -> ty_err "matching error: wait"
+
+
+(**************************************************)
+(* TODO: better name ?? *)
+(* let mult_tyenv m tyenv =
+ *   (\* tyenv から tys だけ取り出す。 *\)
+ *   let tys = todo () in
+ *   List.for_all (fun t -> mult_of_ty t = m) tys *)
+
+(* Env を参照する、どこで定義すべきか？？ *)
+(* check if m(tyenv) holds *)
+let un_tyenv tyenv =
+  (* tyenv から tys だけ取り出す。 *)
+  let tys = Environment.values tyenv in
+  List.for_all un tys
+
+(* unだけで、linは使わない？ *)
+let lin_tyenv tyenv =
+  let tys = Environment.values tyenv in
+  List.for_all lin tys
 
 
 let assert_disjoint xs ys =
