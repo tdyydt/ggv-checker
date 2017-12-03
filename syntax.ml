@@ -172,16 +172,18 @@ type konst =
  * 代わりに prefix=E もありえる
  * *)
 
-type binOp = Plus | Mult | LT
+type binOp = Plus | Minus | Mult | Div (* | LT | Eq *)
 
 type exp =
   | Var of id
-  (* | Unit *)
+  (* | UnitV
+   * | IntV of int
+   * | BoolV of bool *)
   | Konst of konst
   (* integer, bool literal *)
   | BinOp of binOp * exp * exp
 
-  (* fun x:T -> e *)
+  (* fun m (x:T) -> e *)
   (* 規則では Abs *)
   | Fun of mult * id * ty * exp
   | App of exp * exp

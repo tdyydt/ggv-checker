@@ -129,7 +129,7 @@ let rec ty_exp tyenv = function
           else (t, VarSet.empty)
         else ty_err "violation of linearity: var"
       with
-      | Not_found -> ty_err "the variable is not bound"
+      | Not_found -> ty_err ("the variable " ^ x ^ " is not bound")
     end
   | Konst KUnit ->
      if un_tyenv tyenv then (TyUnit, VarSet.empty)
@@ -144,24 +144,29 @@ let rec ty_exp tyenv = function
      else ty_err "violation of linearity: bool"
 
   (* TODO: fix, consider LT *)
+  (* rename? arithmetic operation ?? *)
   | BinOp (op, e1, e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
+     assert_disjoint xs ys;
+     begin
+       match matching_int t1, matching_int t2 with
+       | TyInt, TyInt -> (TyInt, VarSet.union xs ys)
+       | _ -> assert false
+     end
+     (* TODO: un_tyenv tyenv ?? が必要か？？？？*)
+
      (* op の種類に依る。
       * Lt とかもありえる
       * t1,t2 が int か確かめる等
       * LAnd 等も binop に入れて良いのでは？ *)
-     assert_disjoint xs ys;
-     (TyInt, VarSet.union xs ys)
-     (* un_tyenv tyenv ?? *)
-       (* or typing error *)
 
   | Fun (m,x,t,e) ->
      let u, ys = ty_exp (E.add x t tyenv) e in
      (* m :> (Gamma) *)
      if m = Lin || un_tyenv tyenv
        (* remove x from ys, if included *)
-     then (TyFun (Un,t,u), VarSet.remove x ys)
+     then (TyFun (m,t,u), VarSet.remove x ys)
      (* gamma に入っているだけで、実際に使われているかは、言い切れない *)
      else ty_err "unrestricted functions cannot contain variables of a linear type"
 
@@ -186,7 +191,7 @@ let rec ty_exp tyenv = function
      assert_disjoint xs ys;
      (* m :> (t1) /\ m :> (t2) *)
      if m = Lin || (un t1 && un t2)
-     then (TyProd (Un,t1,t2), VarSet.union xs ys)
+     then (TyProd (m,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
   | DestPair (x1,t1,x2,t2,e,f) ->

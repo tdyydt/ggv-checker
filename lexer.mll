@@ -18,7 +18,7 @@ let reservedWords = [
     ("fork", P.FORK);
     ("new", P.NEW);
     ("send", P.SEND);
-    ("reveive", P.RECEIVE);
+    ("receive", P.RECEIVE);
     ("select", P.SELECT);
     ("case", P.CASE);
     ("close", P.CLOSE);

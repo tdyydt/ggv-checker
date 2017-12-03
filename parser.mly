@@ -27,14 +27,6 @@ open Syntax
 %token NU
 %token VBAR
 
-(* TODO:
- * 結合と、優先度 *)
-(* associativity & precedence *)
-(* lowest to highest *)
-(* %left PLUS
- * %left STAR *)
-(* STARって2通りの意味がある。 *)
-
 %token <int> INTV
 %token <Syntax.id> ID
 
@@ -61,13 +53,11 @@ primary_proc :
 expr :
   (* | FUN m=mult x=ID t=ty_annot RARROW e=expr { Fun(m,x,t,e) } *)
   | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr { Fun(m,x,t,e) }
-(* multのつけ場所 *)
-  | LPAREN e1=expr COMMA e2=expr RPAREN m=mult { ConsPair(m,e1,e2) }
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
   | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
         LPAREN y=ID t2=ty_annot RPAREN
-    EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
+    EQ e=plus_expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
 
   (* | NEW { New } *)
   (* | CASE e=expr OF ...  *)
@@ -99,6 +89,8 @@ primary_expr :
   | TRUE { Konst (KBool true) }
   | FALSE { Konst (KBool false) }
   | x=ID { Var x }
+  (* multのつけ場所 ?? *)
+  | LPAREN e1=plus_expr COMMA e2=plus_expr RPAREN m=mult { ConsPair(m,e1,e2) }
   | LPAREN e=expr RPAREN { e }
 
 
