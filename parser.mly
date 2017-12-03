@@ -56,10 +56,9 @@ expr :
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
   | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
-        LPAREN y=ID t2=ty_annot RPAREN
-    EQ e=plus_expr IN f=expr { PairDest(x,t1,y,t2,e,f) }
+        LPAREN y=ID t2=ty_annot RPAREN EQ e=plus_expr
+    IN f=expr { PairDest(x,t1,y,t2,e,f) }
 
-  (* | NEW { New } *)
   (* | CASE e=expr OF ...  *)
   | e=plus_expr { e }
 
@@ -74,6 +73,7 @@ mult_expr :
 app_expr :
   | e1=app_expr e2=primary_expr { App(e1,e2) }
   | FORK e=primary_expr { Fork e }
+  | NEW LPAREN s=session RPAREN { New s } (* 結合順位これで良い?? *)
   | SEND e=primary_expr f=primary_expr { Send(e,f) }
   | RECEIVE e=primary_expr { Receive e }
   | SELECT l=ID e=primary_expr { Select(l,e) }

@@ -184,8 +184,9 @@ type exp =
   (* let x:T1, y:T2 = e1 in e2 *)
   | PairDest of id * ty * id * ty * exp * exp
   | Fork of exp
-  (* TODO: newするチャネルの型が必要？ *)
-  | New
+  (* create both channel endpoints,
+   * whose types are session & dual(session) *)
+  | New of session
   | Send of exp * exp
   | Receive of exp
   | Select of label * exp

@@ -210,8 +210,7 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | New ->
-     let s = todo () in
+  | New s ->
      (TyProd (Lin, TySession s, TySession (dual s)),
       VarSet.empty)
 

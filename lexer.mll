@@ -15,6 +15,8 @@ let reservedWords = [
 
     ("fun", P.FUN);
     ("let", P.LET);
+    ("in", P.IN);
+
     ("fork", P.FORK);
     ("new", P.NEW);
     ("send", P.SEND);
@@ -55,9 +57,9 @@ rule main = parse
 | "*" { P.STAR }
 | "#" { P.HASH }
 
+| "=" { P.EQ }
 | "<" { P.LT }
 (* | ">" { P.GT } *)
-| "=" { P.EQ }
 
 | ['a'-'z'] ['a'-'z' '0'-'9' '_' '\'']*
     { let id = Lexing.lexeme lexbuf in
