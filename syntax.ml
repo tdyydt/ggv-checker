@@ -65,8 +65,17 @@ and string_of_session = function
   | TyReceive (t,s) ->
      Printf.sprintf "(?%s.%s)"
        (string_of_ty t) (string_of_session s)
-  | TySelect _ -> todo ()
-  | TyCase _ -> todo ()
+  | TySelect brs ->
+     (* FIXME: 汚い *)
+     let s =
+       String.concat ", "
+         (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s) brs) in
+     Printf.sprintf "+{%s}" s
+  | TyCase brs ->
+     let s =
+       String.concat ", "
+         (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s) brs) in
+     Printf.sprintf "&{%s}" s
   | TyClose -> "end!"
   | TyWait -> "end?"
   | TyDC -> "#"
@@ -77,8 +86,10 @@ and string_of_session = function
 let rec dual = function
   | TySend (t,s) -> TyReceive (t, dual s)
   | TyReceive (t,s) -> TySend (t, dual s)
-  | TySelect _ -> TyCase (todo ())
-  | TyCase _ -> TySelect (todo ())
+  | TySelect brs ->
+     TyCase (List.map (fun (l,s) -> (l, dual s)) brs)
+  | TyCase brs ->
+     TySelect (List.map (fun (l,s) -> (l, dual s)) brs)
   | TyClose -> TyWait
   | TyWait -> TyClose
   | TyDC -> TyDC

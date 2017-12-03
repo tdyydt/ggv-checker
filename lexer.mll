@@ -49,6 +49,7 @@ rule main = parse
 | "->" { P.RARROW }
 | "!" { P.PL }
 | "?" { P.QU }
+| "&" { P.AMP }
 | ":" { P.COLON }
 | "." { P.PERIOD }
 | "," { P.COMMA }

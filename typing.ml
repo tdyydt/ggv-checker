@@ -239,6 +239,8 @@ let rec ty_exp tyenv = function
   | Select (l,e) ->
      let t, xs = ty_exp tyenv e in
      begin
+       (* matching 関数に l を渡さないと、
+        * DC |> +{l:DC} は出来ない *)
        match matching_select t with
        | _ -> todo ()
      end

@@ -15,6 +15,7 @@ open Syntax
 
 (* pling! & question? *)
 %token PL QU
+%token AMP
 %token END
 %token PERIOD COMMA
 
@@ -58,6 +59,13 @@ expr :
   | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
         LPAREN y=ID t2=ty_annot RPAREN EQ e=plus_expr
     IN f=expr { PairDest(x,t1,y,t2,e,f) }
+
+  (* let (x:t) = e in f
+   * is equivalent to
+   * (fun lin (x:t) -> f) e *)
+  | LET LPAREN x=ID t=ty_annot RPAREN EQ e=plus_expr
+    IN f=expr { App (Fun(Lin,x,t,f), e) }
+  (* TODO: let 式は primitive として追加して、型推論する？ *)
 
   (* | CASE e=expr OF ...  *)
   | e=plus_expr { e }
@@ -116,22 +124,18 @@ session :
   | PL t=primary_ty PERIOD s=session { TySend(t,s) }
   | QU t=primary_ty PERIOD s=session { TyReceive(t,s) }
 
-  (* | PLUS LBRACE br=branches RBRACE { TySelect br }
-   * | AMP LBRACE br=branches RBRACE { TyCase br } *)
+  | PLUS LBRACE br=separated_list(COMMA, branch) RBRACE { TySelect br }
+  | AMP LBRACE br=separated_list(COMMA, branch) RBRACE { TyCase br }
   | s=primary_session { s }
+
+branch :
+  | l=ID COLON s=session { (l,s) }
 
 primary_session :
   | END PL { TyClose }
   | END QU { TyWait }
   | HASH { TyDC }
   | LPAREN s=session RPAREN { s }
-
-(* branches :
- *   | l=ID COLON s=session { (l,s) }
- *   | separated_list (COMMA, )
- *
- * branch :
- *       | *)
 
 mult :
   | UN { Un }
