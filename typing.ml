@@ -29,8 +29,13 @@ let matching_unit = function
   | TyDyn -> TyUnit
   | _ -> ty_err "matching error: unit"
 
-let matching_int = todo
-let matching_bool = todo
+let matching_int = function
+  | (TyInt | TyDyn) -> TyInt
+  | _ -> ty_err "matching error: int"
+
+let matching_bool = function
+  | (TyBool | TyDyn) -> TyBool
+  | _ -> ty_err "matching error: bool"
 
 let matching_fun = function
   | TyFun (m,t,u) as ty -> ty

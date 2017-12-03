@@ -37,11 +37,39 @@ and session =
   | TyWait
   | TyDC
 
-let string_of_ty = function
+let string_of_mult = function
+  | Un -> "un"
+  | Lin -> "lin"
+
+(* TODO: カッコを減らす *)
+let rec string_of_ty = function
   | TyUnit -> "unit"
   | TyInt -> "int"
   | TyBool -> "bool"
-  | _ -> todo ()
+  | TySession s -> string_of_session s
+  | TyFun (m,t,u) ->
+     Printf.sprintf "(%s ->%s %s)"
+       (string_of_ty t) (string_of_mult m) (string_of_ty u)
+     (* "(" ^ string_of_ty t ^ ")"
+      * ^ " ->" string_of_mult m ^ " "
+      * ^ "(" ^ string_of_ty u ^ ")" *)
+  | TyProd (m,t,u) ->
+     Printf.sprintf "(%s *%s %s)"
+       (string_of_ty t) (string_of_mult m) (string_of_ty u)
+  | TyDyn -> "*"
+
+and string_of_session = function
+  | TySend (t,s) ->
+     Printf.sprintf "(!%s.%s)"
+       (string_of_ty t) (string_of_session s)
+  | TyReceive (t,s) ->
+     Printf.sprintf "(?%s.%s)"
+       (string_of_ty t) (string_of_session s)
+  | TySelect _ -> todo ()
+  | TyCase _ -> todo ()
+  | TyClose -> "end!"
+  | TyWait -> "end?"
+  | TyDC -> "#"
 
 
 (* duality *)
