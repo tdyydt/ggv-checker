@@ -57,7 +57,7 @@ expr :
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
   | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
         LPAREN y=ID t2=ty_annot RPAREN
-    EQ e=plus_expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
+    EQ e=plus_expr IN f=expr { PairDest(x,t1,y,t2,e,f) }
 
   (* | NEW { New } *)
   (* | CASE e=expr OF ...  *)
@@ -84,13 +84,13 @@ app_expr :
 
 (* aexpr と同じ  *)
 primary_expr :
-  | LPAREN RPAREN { Konst KUnit }
-  | v=INTV { Konst (KInt v) }
-  | TRUE { Konst (KBool true) }
-  | FALSE { Konst (KBool false) }
+  | LPAREN RPAREN { UnitV }
+  | v=INTV { IntV v }
+  | TRUE { BoolV true }
+  | FALSE { BoolV false }
   | x=ID { Var x }
   (* multのつけ場所 ?? *)
-  | LPAREN e1=plus_expr COMMA e2=plus_expr RPAREN m=mult { ConsPair(m,e1,e2) }
+  | LPAREN e1=plus_expr COMMA e2=plus_expr RPAREN m=mult { PairCons(m,e1,e2) }
   | LPAREN e=expr RPAREN { e }
 
 

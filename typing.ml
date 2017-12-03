@@ -131,15 +131,15 @@ let rec ty_exp tyenv = function
       with
       | Not_found -> ty_err ("the variable " ^ x ^ " is not bound")
     end
-  | Konst KUnit ->
+  | UnitV ->
      if un_tyenv tyenv then (TyUnit, VarSet.empty)
      (* tyenv の中の linear な変数が捨てられることになり、
       * それを咎める *)
      else ty_err "violation of linearity: unit"
-  | Konst (KInt _) ->
+  | IntV _ ->
      if un_tyenv tyenv then (TyInt, VarSet.empty)
      else ty_err "violation of linearity: int"
-  | Konst (KBool _) ->
+  | BoolV _ ->
      if un_tyenv tyenv then (TyBool, VarSet.empty)
      else ty_err "violation of linearity: bool"
 
@@ -185,7 +185,7 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | ConsPair (m,e1,e2) ->
+  | PairCons (m,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
@@ -194,7 +194,7 @@ let rec ty_exp tyenv = function
      then (TyProd (m,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
-  | DestPair (x1,t1,x2,t2,e,f) ->
+  | PairDest (x1,t1,x2,t2,e,f) ->
      let t, ys = ty_exp tyenv e in
      (* extend (x,t1) (y,t2) in tyenv *)
      let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in

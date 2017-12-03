@@ -161,12 +161,6 @@ and con_sub_session s r = match s,r with
  * with_position
  * *)
 
-(* konst *)
-type konst =
-  | KUnit
-  | KInt of int
-  | KBool of bool
-
 (* NOTE:
  * コンストラクタの postfix の Exp は付けずに。
  * 代わりに prefix=E もありえる
@@ -176,10 +170,9 @@ type binOp = Plus | Minus | Mult | Div (* | LT | Eq *)
 
 type exp =
   | Var of id
-  (* | UnitV
-   * | IntV of int
-   * | BoolV of bool *)
-  | Konst of konst
+  | UnitV
+  | IntV of int
+  | BoolV of bool
   (* integer, bool literal *)
   | BinOp of binOp * exp * exp
 
@@ -187,9 +180,9 @@ type exp =
   (* 規則では Abs *)
   | Fun of mult * id * ty * exp
   | App of exp * exp
-  | ConsPair of mult * exp * exp
+  | PairCons of mult * exp * exp
   (* let x:T1, y:T2 = e1 in e2 *)
-  | DestPair of id * ty * id * ty * exp * exp
+  | PairDest of id * ty * id * ty * exp * exp
   | Fork of exp
   (* TODO: newするチャネルの型が必要？ *)
   | New
