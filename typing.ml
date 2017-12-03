@@ -110,7 +110,7 @@ let assert_disjoint xs ys =
                                (* zs を表示すれば良さそう。 *)
                                (* violation of linearity *)
                                (* 関数の名前から、specific すぎるエラーはどうなのか？ *)
-  else ty_err "Not disjoint"
+  else ty_err "Not disjoint sets"
 (* VarSet.t -> VarSet.t -> bool *)
 (* let is_disjoint xs ys =
  *   VarSet.is_empty (VarSet.inter xs ys) *)
@@ -125,10 +125,9 @@ let rec ty_exp tyenv = function
       try
         let t = E.find x tyenv in
         if un_tyenv (E.remove x tyenv) then
-          (* Set を使うべき？要検討 *)
           if lin t then (t, VarSet.singleton x)
           else (t, VarSet.empty)
-        else ty_err "violation of linearity"
+        else ty_err "violation of linearity: var"
       with
       | Not_found -> ty_err "the variable is not bound"
     end
@@ -136,13 +135,13 @@ let rec ty_exp tyenv = function
      if un_tyenv tyenv then (TyUnit, VarSet.empty)
      (* tyenv の中の linear な変数が捨てられることになり、
       * それを咎める *)
-     else ty_err "violation of linearity"
+     else ty_err "violation of linearity: unit"
   | Konst (KInt _) ->
      if un_tyenv tyenv then (TyInt, VarSet.empty)
-     else ty_err "violation of linearity"
+     else ty_err "violation of linearity: int"
   | Konst (KBool _) ->
      if un_tyenv tyenv then (TyBool, VarSet.empty)
-     else ty_err "violation of linearity"
+     else ty_err "violation of linearity: bool"
 
   (* TODO: fix, consider LT *)
   | BinOp (op, e1, e2) ->
@@ -182,7 +181,7 @@ let rec ty_exp tyenv = function
        | TyFun (m, t11, t12) ->
           if con_sub_ty t2 t11
           then (t12, VarSet.union xs ys)
-          else ty_err "not consistent subtype"
+          else ty_err "not consistent subtype: app"
        (* matching fun とかで、すでに弾かれていて
         * ここまでエラーが来ないかも。
         * TODO: どう書くのが自然？ *)
@@ -233,7 +232,7 @@ let rec ty_exp tyenv = function
        | TySession (TySend (t3,s)) ->
           if con_sub_ty t1 t3
           then (TySession s, VarSet.union xs ys)
-          else ty_err "Not consistent subtype"
+          else ty_err "Not consistent subtype: send"
        | _ -> assert false
      end
 

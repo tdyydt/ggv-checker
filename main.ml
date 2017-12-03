@@ -13,13 +13,15 @@ let rec read_eval_print tyenv =
     let ty, _ = ty_exp tyenv exp in
     (* Printf.printf "" *)
     print_string (string_of_ty ty);
-    print_newline ()
+    print_newline ();
+    read_eval_print tyenv
   with
   (* parse error (Menhir),
    * lexer error,
    * or typing error etc. *)
   | Typing_error s -> print_string s;
-                      print_newline ()
+                      print_newline ();
+                      read_eval_print tyenv
 
 
 (* empty environment *)

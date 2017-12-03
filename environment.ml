@@ -20,9 +20,11 @@ let remove x env = M.remove x env
 
 let find x env = M.find x env
 
-(* env の値だけ取る
- * 型環境の型だけ *)
+
 (* keys, values *)
 (* dom, codom(range) *)
+
+(* pick up values from a environment *)
+(* cod(env) *)
 let values env =
   M.fold (fun k v vs -> v :: vs) env []
