@@ -44,8 +44,9 @@ rule main = parse
 | "{" { P.LBRACE }
 | "}" { P.RBRACE }
 
-(* | ";;" { P.SEMISEMI } *)
 | "->" { P.RARROW }
+| "!" { P.PL }
+| "?" { P.QU }
 | ":" { P.COLON }
 | "." { P.PERIOD }
 | "," { P.COMMA }

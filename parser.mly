@@ -47,7 +47,7 @@ toplevel :
   | p=proc SEMISEMI { p }
 
 proc :
-  | p=primary_proc VBAR q=primary_proc { Par(p,q) }
+  | p=proc VBAR q=primary_proc { Par(p,q) }
     (* (nu c,d) P | Q
      * カッコを付けたい*)
   | LPAREN NU c=ID COMMA d=ID RPAREN p=proc { NuBind(c,d,p) }
@@ -59,25 +59,38 @@ primary_proc :
   | LPAREN p=proc RPAREN { p }
 
 expr :
-  | FUN m=mult i=ID t=ty_annot RARROW e=expr { Fun(m,i,t,e) }
-  | e1=primary_expr e2=primary_expr { App(e1,e2) }
+  (* | FUN m=mult x=ID t=ty_annot RARROW e=expr { Fun(m,x,t,e) } *)
+  | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr { Fun(m,x,t,e) }
 (* multのつけ場所 *)
   | LPAREN e1=expr COMMA e2=expr RPAREN m=mult { ConsPair(m,e1,e2) }
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
-  | LET x=ID t1=ty_annot COMMA y=ID t2=ty_annot EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
+  | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
+        LPAREN y=ID t2=ty_annot RPAREN
+    EQ e=expr IN f=expr { DestPair(x,t1,y,t2,e,f) }
+
+  (* | NEW { New } *)
+  (* | CASE e=expr OF ...  *)
+  | e=plus_expr { e }
+
+plus_expr :
+  | e1=plus_expr PLUS e2=mult_expr { BinOp(Plus, e1, e2) }
+  | e=mult_expr { e }
+
+mult_expr :
+  | e1=mult_expr STAR e2=app_expr { BinOp(Mult, e1, e2) }
+  | e=app_expr { e }
+
+app_expr :
+  | e1=app_expr e2=primary_expr { App(e1,e2) }
   | FORK e=primary_expr { Fork e }
-  | NEW { New }
   | SEND e=primary_expr f=primary_expr { Send(e,f) }
   | RECEIVE e=primary_expr { Receive e }
   | SELECT l=ID e=primary_expr { Select(l,e) }
-  (* | CASE e=expr OF ...  *)
   | CLOSE e=primary_expr { Close e }
   | WAIT e=primary_expr { Wait e }
-
-  | e1=expr STAR e2=expr { BinOp(Mult, e1, e2) }
-  | e1=expr PLUS e2=expr { BinOp(Plus, e1, e2) }
   | e=primary_expr { e }
+
 
 (* aexpr と同じ  *)
 primary_expr :
@@ -95,21 +108,21 @@ ty_annot :
 
 ty :
  (* TODO: multの文法  *)
-  | t1=ty RARROW m=mult t2=ty { TyFun(m,t1,t2) }
-  | t1=ty STAR m=mult t2=ty { TyProd(m,t1,t2) }
+  | t1=primary_ty RARROW m=mult t2=ty { TyFun(m,t1,t2) }
+  | t1=primary_ty STAR m=mult t2=ty { TyProd(m,t1,t2) }
+  | s=session { TySession s }
   | t=primary_ty { t }
 
 primary_ty :
   | UNIT { TyUnit }
   | INT { TyInt }
   | BOOL { TyBool }
-  | s=session { TySession s }
   | STAR { TyDyn }
   | LPAREN t=ty RPAREN { t }
 
 session :
-  | PL t=ty PERIOD s=session { TySend(t,s) }
-  | QU t=ty PERIOD s=session { TyReceive(t,s) }
+  | PL t=primary_ty PERIOD s=session { TySend(t,s) }
+  | QU t=primary_ty PERIOD s=session { TyReceive(t,s) }
 
   (* | PLUS LBRACE br=branches RBRACE { TySelect br }
    * | AMP LBRACE br=branches RBRACE { TyCase br } *)
