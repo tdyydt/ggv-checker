@@ -67,9 +67,10 @@ let matching_select t l = match t with
   | (TySession TyDC | TyDyn) -> [(l, TyDC)]
   | _ -> ty_err "matching error: select"
 
-let matching_case = function
-  | TySession (TyCase _) as ty -> ty
-  | (TySession TyDC | TyDyn) -> todo ()
+let matching_case t ls = match t with
+  | TySession (TyCase br) -> br
+  | (TySession TyDC | TyDyn) ->
+     List.map (fun l -> (l, TyDC)) ls
   | _ -> ty_err "matching error: case"
 
 let matching_close = function
@@ -258,19 +259,44 @@ let rec ty_exp tyenv = function
   | Select (l,e) ->
      let t, xs = ty_exp tyenv e in
      let br = matching_select t l in
-     (* check if label l is in branches *)
-     (* l が入っているか？ *)
      begin
        try
+       (* check if label l is in branches *)
+       (* l が入っているか？ *)
+       (* この検査まで matching_select でできるが、
+        * 規則に合わせると、そうしない方が自然か *)
          let s = List.assoc l br in (TySession s, xs)
        with
-       | Not_found ->
-          (* l が入っていないということ *)
-          ty_err "label is not in branches"
+       (* l が入っていないということ *)
+       | Not_found -> ty_err "label is not in branches"
      end
 
   (* br=branch *)
-  | Case (e, brs) -> todo ()
+  | Case (e, brs) ->
+     let t, xs = ty_exp tyenv e in
+     (* pick up labels *)
+     let ls = List.map (fun (l,_,_) -> l) brs in
+     let ty_brs = matching_case t ls in
+     begin
+       try
+         (* 式 f[i] の型 u[i],
+          * その型付けで用いた linear 変数集合 ys[i]
+          * の組たちのリスト *)
+         let _ =
+           List.map (fun (l,x,f) ->
+               let s = List.assoc l ty_brs in
+               let u, ys = ty_exp (E.add x (TySession s) tyenv) f in
+               (u, VarSet.remove x ys))
+             brs in
+         (* ys[i] たちは bigUnion を取る。
+          * u[i] たちは等しいはず
+          * assertEq かい？ *)
+         todo ()
+       with
+       (* どこかの部分式でエラーが起きた場合 *)
+       | Not_found -> ty_err "label is not in branches"
+     end
+
 
   | Close e ->
      let t, xs = ty_exp tyenv e in
