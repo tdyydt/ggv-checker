@@ -6,7 +6,8 @@ open Syntax
 %token LPAREN RPAREN
 %token LBRACE RBRACE
 
-%token PLUS LT
+%token PLUS MINUS
+(* %token LT *)
 %token STAR HASH
 %token TRUE FALSE
 
@@ -81,6 +82,7 @@ branch:
 
 plus_expr :
   | e1=plus_expr PLUS e2=mult_expr { BinOp(Plus, e1, e2) }
+  | e1=plus_expr MINUS e2=mult_expr { BinOp(Minus, e1, e2) }
   | e=mult_expr { e }
 
 mult_expr :

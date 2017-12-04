@@ -23,6 +23,7 @@ let reservedWords = [
     ("receive", P.RECEIVE);
     ("select", P.SELECT);
     ("case", P.CASE);
+    ("of", P.OF);
     ("close", P.CLOSE);
     ("wait", P.WAIT);
 
@@ -56,11 +57,12 @@ rule main = parse
 | "," { P.COMMA }
 
 | "+" { P.PLUS }
+| "-" { P.MINUS }
 | "*" { P.STAR }
 | "#" { P.HASH }
 
 | "=" { P.EQ }
-| "<" { P.LT }
+(* | "<" { P.LT } *)
 (* | ">" { P.GT } *)
 
 | ['a'-'z'] ['a'-'z' '0'-'9' '_' '\'']*
