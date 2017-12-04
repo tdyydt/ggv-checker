@@ -51,6 +51,7 @@ rule main = parse
 | "?" { P.QU }
 | "&" { P.AMP }
 | ":" { P.COLON }
+| ";" { P.SEMI }
 | "." { P.PERIOD }
 | "," { P.COMMA }
 

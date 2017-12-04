@@ -13,9 +13,8 @@ open Syntax
 %token LIN UN
 %token UNIT INT BOOL
 
-(* pling! & question? *)
-%token PL QU
-%token AMP
+%token PL QU                    (* pling!, question? *)
+%token AMP                      (* ampersand& *)
 %token END
 %token PERIOD COMMA
 
@@ -23,7 +22,8 @@ open Syntax
 %token FUN RARROW COLON
 
 %token FORK NEW SEND RECEIVE
-%token SELECT CASE CLOSE WAIT
+%token SELECT CLOSE WAIT
+%token CASE OF SEMI
 
 %token NU
 %token VBAR
@@ -32,7 +32,6 @@ open Syntax
 %token <Syntax.id> ID
 
 %start toplevel
-(* toplevel は exp でいいか？ *)
 %type <Syntax.proc> toplevel
 %%
 
@@ -67,8 +66,18 @@ expr :
     IN f=expr { App (Fun(Lin,x,t,f), e) }
   (* TODO: let 式は primitive として追加して、型推論する？ *)
 
-  (* | CASE e=expr OF ...  *)
+  | CASE e=plus_expr OF
+    LBRACE br=separated_list(SEMI, branch) RBRACE
+    { Case (e,br) }
+
   | e=plus_expr { e }
+
+(* case branch *)
+branch:
+  (* | l=ID COLON x=ID PERIOD e=expr { (l,x,e) } *)
+  (* | l=ID COLON LPAREN x=ID t=ty_annot RPAREN PERIOD e=expr *)
+  | l=ID COLON LPAREN x=ID COLON s=session RPAREN PERIOD e=expr
+    { (l,x,s,e) }
 
 plus_expr :
   | e1=plus_expr PLUS e2=mult_expr { BinOp(Plus, e1, e2) }
@@ -124,11 +133,11 @@ session :
   | PL t=primary_ty PERIOD s=session { TySend(t,s) }
   | QU t=primary_ty PERIOD s=session { TyReceive(t,s) }
 
-  | PLUS LBRACE br=separated_list(COMMA, branch) RBRACE { TySelect br }
-  | AMP LBRACE br=separated_list(COMMA, branch) RBRACE { TyCase br }
+  | PLUS LBRACE br=separated_list(COMMA, branch_ty) RBRACE { TySelect br }
+  | AMP LBRACE br=separated_list(COMMA, branch_ty) RBRACE { TyCase br }
   | s=primary_session { s }
 
-branch :
+branch_ty :
   | l=ID COLON s=session { (l,s) }
 
 primary_session :

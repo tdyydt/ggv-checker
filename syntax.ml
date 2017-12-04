@@ -50,9 +50,6 @@ let rec string_of_ty = function
   | TyFun (m,t,u) ->
      Printf.sprintf "(%s ->%s %s)"
        (string_of_ty t) (string_of_mult m) (string_of_ty u)
-     (* "(" ^ string_of_ty t ^ ")"
-      * ^ " ->" string_of_mult m ^ " "
-      * ^ "(" ^ string_of_ty u ^ ")" *)
   | TyProd (m,t,u) ->
      Printf.sprintf "(%s *%s %s)"
        (string_of_ty t) (string_of_mult m) (string_of_ty u)
@@ -202,7 +199,7 @@ type exp =
   | Receive of exp
   | Select of label * exp
   (* FIXME: branch を置き換えよ *)
-  (* | Case of exp * (??? list) *)
+  | Case of exp * (label * id * session * exp) list
   | Close of exp
   | Wait of exp
 

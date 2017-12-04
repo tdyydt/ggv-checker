@@ -245,7 +245,7 @@ let rec ty_exp tyenv = function
        | _ -> todo ()
      end
 
-  (* | Case _ -> todo () *)
+  | Case _ -> todo ()
 
   | Close e ->
      let t, xs = ty_exp tyenv e in
