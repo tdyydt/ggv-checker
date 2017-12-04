@@ -116,32 +116,34 @@ let assert_disjoint xs ys =
  *   VarSet.is_empty (VarSet.inter xs ys) *)
 
 
-(* TODO: 型付けに用いた linear 変数の集合を返す。
- * ように改良する *)
+(* TODO:
+ * linear な変数が使われずに、捨てられることをどこで咎める？？
+ * un_tyenv tyenv にあたるもの。
+ * un_tyenv は要らない？
+ * Gamma から lin vars だけ取り出す処理が必要か？？
+ *
+ * Gamma はずっと連れ回されて、
+ * 最後の 式e がプロセスになる時点で
+ * lin_vars(tyenv) = eで使われるlv集合
+ *
+ * process typing のところでの判定になる？
+ * この判定がどこにも見えない。
+ * *)
+
 (* returns the set of linear type variables used in typing *)
 (* tyenv -> exp -> ty * VarSet.t *)
 let rec ty_exp tyenv = function
   | Var x -> begin
       try
         let t = E.find x tyenv in
-        if un_tyenv (E.remove x tyenv) then
-          if lin t then (t, VarSet.singleton x)
-          else (t, VarSet.empty)
-        else ty_err "violation of linearity: var"
+        if lin t then (t, VarSet.singleton x)
+        else (t, VarSet.empty)
       with
       | Not_found -> ty_err ("the variable " ^ x ^ " is not bound")
     end
-  | UnitV ->
-     if un_tyenv tyenv then (TyUnit, VarSet.empty)
-     (* tyenv の中の linear な変数が捨てられることになり、
-      * それを咎める *)
-     else ty_err "violation of linearity: unit"
-  | IntV _ ->
-     if un_tyenv tyenv then (TyInt, VarSet.empty)
-     else ty_err "violation of linearity: int"
-  | BoolV _ ->
-     if un_tyenv tyenv then (TyBool, VarSet.empty)
-     else ty_err "violation of linearity: bool"
+  | UnitV -> (TyUnit, VarSet.empty)
+  | IntV _ -> (TyInt, VarSet.empty)
+  | BoolV _ -> (TyBool, VarSet.empty)
 
   (* TODO: fix, consider LT *)
   (* rename? arithmetic operation ?? *)
@@ -161,13 +163,25 @@ let rec ty_exp tyenv = function
       * t1,t2 が int か確かめる等
       * LAnd 等も binop に入れて良いのでは？ *)
 
-  | Fun (m,x,t,e) ->
+  (* | Fun (m,x,t,e) ->
+   *    let u, ys = ty_exp (E.add x t tyenv) e in
+   *    (\* m :> (Gamma) *\)
+   *    if m = Lin || un_tyenv tyenv
+   *      (\* remove x from ys, if included *\)
+   *    then (TyFun (m,t,u), VarSet.remove x ys)
+   *    (\* gamma に入っているだけで、実際に使われているかは、言い切れない *\)
+   *    else ty_err "unrestricted functions cannot contain variables of a linear type" *)
+
+  | Fun (Lin,x,t,e) ->
      let u, ys = ty_exp (E.add x t tyenv) e in
-     (* m :> (Gamma) *)
-     if m = Lin || un_tyenv tyenv
-       (* remove x from ys, if included *)
-     then (TyFun (m,t,u), VarSet.remove x ys)
-     (* gamma に入っているだけで、実際に使われているかは、言い切れない *)
+     (TyFun (Lin,t,u), VarSet.remove x ys)
+
+  | Fun (Un,x,t,e) ->
+     (* un 関数を作るため、
+      * e に lin 変数が含まれていないこと *)
+     let u, ys = ty_exp (E.add x t tyenv) e in
+     if VarSet.is_empty ys
+     then (TyFun (Un,t,u), VarSet.remove x ys)
      else ty_err "unrestricted functions cannot contain variables of a linear type"
 
   | App (e1,e2) ->
@@ -185,13 +199,31 @@ let rec ty_exp tyenv = function
        | _ -> assert false
      end
 
-  | PairCons (m,e1,e2) ->
+  (* m = Un であったら、
+   * xs,ysはから出ないといけない。*)
+  (* | PairCons (m,e1,e2) ->
+   *    let t1, xs = ty_exp tyenv e1 in
+   *    let t2, ys = ty_exp tyenv e2 in
+   *    assert_disjoint xs ys;
+   *    (\* m :> (t1) /\ m :> (t2) *\)
+   *    if m = Lin || (un t1 && un t2)
+   *    then (TyProd (m,t1,t2), VarSet.union xs ys)
+   *    else ty_err "unrestricted pairs cannot contain linear varialbes" *)
+
+  | PairCons (Lin,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     (* m :> (t1) /\ m :> (t2) *)
-     if m = Lin || (un t1 && un t2)
-     then (TyProd (m,t1,t2), VarSet.union xs ys)
+     (TyProd (Lin,t1,t2), VarSet.union xs ys)
+
+  | PairCons (Un,e1,e2) ->
+     let t1, xs = ty_exp tyenv e1 in
+     let t2, ys = ty_exp tyenv e2 in
+     assert_disjoint xs ys;
+     (* e1,e2 に linear 変数が含まれている場合、
+      * それらが複製されることになる *)
+     if VarSet.is_empty xs && VarSet.is_empty ys
+     then (TyProd (Un,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
   | PairDest (x1,t1,x2,t2,e,f) ->
