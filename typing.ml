@@ -23,41 +23,42 @@ let ty_err s = raise (Typing_error s)
  * translation 等でも使うため *)
 (* TODO: ty_err じゃなくて、matching_err とかのほうがいい？ *)
 
+(* 型を返すのではなく、
+ * 型コンストラクタの引数を返す。
+ * 引数が無い時は () を返す *)
+
 (* matching_base ?????? *)
 let matching_unit = function
-  | TyUnit -> TyUnit
-  | TyDyn -> TyUnit
+  | (TyUnit | TyDyn) -> ()
   | _ -> ty_err "matching error: unit"
 
 let matching_int = function
-  | (TyInt | TyDyn) -> TyInt
+  | (TyInt | TyDyn) -> ()
   | _ -> ty_err "matching error: int"
 
 let matching_bool = function
-  | (TyBool | TyDyn) -> TyBool
+  | (TyBool | TyDyn) -> ()
   | _ -> ty_err "matching error: bool"
 
 let matching_fun = function
-  | TyFun (m,t,u) as ty -> ty
-  | TyDyn -> TyFun (Lin, TyDyn, TyDyn)
+  | TyFun (m,t,u) -> (m,t,u)
+  | TyDyn -> (Lin, TyDyn, TyDyn)
   | _ -> ty_err "matching error: fun"
 
 let matching_prod = function
-  | TyProd (m,t,u) as ty -> ty
-  | TyDyn -> TyProd (Lin, TyDyn, TyDyn)
+  | TyProd (m,t,u) -> (m,t,u)
+  | TyDyn -> (Lin, TyDyn, TyDyn)
   | _ -> ty_err "matching error: prod"
 
-(* ty -> ty *)
-(* ty -> session も有り得る
- * 統一性の観点から、なし？ *)
+(* ty -> ty * session *)
 let matching_send = function
-  | TySession (TySend (t,s)) as ty -> ty
-  | (TySession TyDC | TyDyn) -> TySession (TySend (TyDyn, TyDC))
+  | TySession (TySend (t,s)) -> (t,s)
+  | (TySession TyDC | TyDyn) -> (TyDyn, TyDC)
   | _ -> ty_err "matching error: send"
 
 let matching_receive = function
-  | TySession (TyReceive (t,s)) as ty -> ty
-  | (TySession TyDC | TyDyn) -> TySession (TyReceive (TyDyn, TyDC))
+  | TySession (TyReceive (t,s)) -> (t,s)
+  | (TySession TyDC | TyDyn) -> (TyDyn, TyDC)
   | _ -> ty_err "matching error: receive"
 
 let matching_select t l = match t with
@@ -72,13 +73,13 @@ let matching_case = function
   | _ -> ty_err "matching error: case"
 
 let matching_close = function
-  | TySession TyClose as ty -> ty
-  | (TySession TyDC | TyDyn) -> TySession TyClose
+  | TySession TyClose -> ()
+  | (TySession TyDC | TyDyn) -> ()
   | _ -> ty_err "matching error: close"
 
 let matching_wait = function
-  | TySession TyWait as ty -> ty
-  | (TySession TyDC | TyDyn) -> TySession TyWait
+  | TySession TyWait -> ()
+  | (TySession TyDC | TyDyn) -> ()
   | _ -> ty_err "matching error: wait"
 
 
@@ -149,13 +150,10 @@ let rec ty_exp tyenv = function
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     begin
-       match matching_int t1, matching_int t2 with
-       | TyInt, TyInt -> (TyInt, VarSet.union xs ys)
-       | _ -> assert false
-     end
-     (* TODO: un_tyenv tyenv ?? が必要か？？？？*)
+     let _ = matching_int t1, matching_int t2 in
+     (TyInt, VarSet.union xs ys)
 
+     (* TODO: un_tyenv tyenv ?? が必要か？？？？*)
      (* op の種類に依る。
       * Lt とかもありえる
       * t1,t2 が int か確かめる等
@@ -185,17 +183,10 @@ let rec ty_exp tyenv = function
   | App (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
-     begin
-       match matching_fun t1 with
-       | TyFun (m, t11, t12) ->
-          if con_sub_ty t2 t11
-          then (t12, VarSet.union xs ys)
-          else ty_err "not consistent subtype: app"
-       (* matching fun とかで、すでに弾かれていて
-        * ここまでエラーが来ないかも。
-        * TODO: どう書くのが自然？ *)
-       | _ -> assert false
-     end
+     let m, t11, t12 = matching_fun t1 in
+     if con_sub_ty t2 t11
+     then (t12, VarSet.union xs ys)
+     else ty_err "not consistent subtype: app"
 
   (* m = Un であったら、
    * xs,ysはから出ないといけない。*)
@@ -234,23 +225,17 @@ let rec ty_exp tyenv = function
 
   | PairDest (x1,x2,e,f) ->
      let t, ys = ty_exp tyenv e in
-     begin
-       match matching_prod t with
-       | TyProd (_, t1,t2) ->
-          let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
-          let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
-          assert_disjoint ys zs';
-          (u, VarSet.union ys zs')
-       | _ -> assert false
-     end
+     let _, t1, t2 = matching_prod t in
+     let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
+     (* remove x1, x2 *)
+     let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+     assert_disjoint ys zs';
+     (u, VarSet.union ys zs')
 
   | Fork e ->
      let t, xs = ty_exp tyenv e in
-     begin
-       match matching_unit t with
-       | TyUnit -> (TyUnit, xs)
-       | _ -> assert false
-     end
+     let _ = matching_unit t in
+     (TyUnit, xs)
 
   | New s ->
      (TyProd (Lin, TySession s, TySession (dual s)),
@@ -260,30 +245,21 @@ let rec ty_exp tyenv = function
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     begin
-       match matching_send t2 with
-       | TySession (TySend (t3,s)) ->
-          if con_sub_ty t1 t3
-          then (TySession s, VarSet.union xs ys)
-          else ty_err "Not consistent subtype: send"
-       | _ -> assert false
-     end
+     let t3, s = matching_send t2 in
+     if con_sub_ty t1 t3
+     then (TySession s, VarSet.union xs ys)
+     else ty_err "Not consistent subtype: send"
 
   | Receive e ->
      let t1, xs = ty_exp tyenv e in
-     begin
-       match matching_receive t1 with
-       | TySession (TyReceive (t2,s)) ->
-          (TyProd (Lin, t2, TySession s), xs)
-       | _ -> assert false
-     end
+     let t2, s = matching_receive t1 in
+     (TyProd (Lin, t2, TySession s), xs)
 
   | Select (l,e) ->
      let t, xs = ty_exp tyenv e in
      let br = matching_select t l in
      (* check if label l is in branches *)
      (* l が入っているか？ *)
-     (* if List.mem_assoc l br then *)
      begin
        try
          let s = List.assoc l br in (TySession s, xs)
@@ -298,16 +274,10 @@ let rec ty_exp tyenv = function
 
   | Close e ->
      let t, xs = ty_exp tyenv e in
-     begin
-       match matching_close t with
-       | TySession TyClose -> (TyUnit, xs)
-       | _ -> assert false
-     end
+     let () = matching_close t in
+     (TyUnit, xs)
 
   | Wait e ->
      let t, xs = ty_exp tyenv e in
-     begin
-       match matching_wait t with
-       | TySession TyWait -> (TyUnit, xs)
-       | _ -> assert false
-     end
+     let () = matching_wait t in
+     (TyUnit, xs)
