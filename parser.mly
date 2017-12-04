@@ -52,11 +52,12 @@ primary_proc :
 
 expr :
   (* | FUN m=mult x=ID t=ty_annot RARROW e=expr { Fun(m,x,t,e) } *)
-  | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr { Fun(m,x,t,e) }
+  | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr
+    { Fun(m,x,t,e) }
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
-  | LET x=ID COMMA y=ID EQ e=plus_expr
-    IN f=expr { PairDest(x,y,e,f) }
+  | LET x=ID COMMA y=ID EQ e=plus_expr IN f=expr
+    { PairDest(x,y,e,f) }
 
   (* let (x:t) = e in f
    * is equivalent to
@@ -76,8 +77,7 @@ expr :
 branch:
   (* | l=ID COLON x=ID PERIOD e=expr { (l,x,e) } *)
   (* | l=ID COLON LPAREN x=ID t=ty_annot RPAREN PERIOD e=expr *)
-  | l=ID COLON LPAREN x=ID COLON s=session RPAREN PERIOD e=expr
-    { (l,x,s,e) }
+  | l=ID COLON x=ID PERIOD e=expr { (l,x,e) }
 
 plus_expr :
   | e1=plus_expr PLUS e2=mult_expr { BinOp(Plus, e1, e2) }

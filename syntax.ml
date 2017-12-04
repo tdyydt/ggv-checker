@@ -199,7 +199,7 @@ type exp =
   | Receive of exp
   | Select of label * exp
   (* FIXME: branch を置き換えよ *)
-  | Case of exp * (label * id * session * exp) list
+  | Case of exp * (label * id * exp) list
   | Close of exp
   | Wait of exp
 
