@@ -226,13 +226,25 @@ let rec ty_exp tyenv = function
      then (TyProd (Un,t1,t2), VarSet.union xs ys)
      else ty_err "unrestricted pairs cannot contain linear varialbes"
 
-  | PairDest (x1,t1,x2,t2,e,f) ->
+  (* | PairDest (x1,t1,x2,t2,e,f) ->
+   *    let t, ys = ty_exp tyenv e in
+   *    (\* extend (x,t1) (y,t2) in tyenv *\)
+   *    let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
+   *    let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+   *    assert_disjoint ys zs';
+   *    (u, VarSet.union ys zs') *)
+
+  | PairDest (x1,x2,e,f) ->
      let t, ys = ty_exp tyenv e in
-     (* extend (x,t1) (y,t2) in tyenv *)
-     let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
-     let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
-     assert_disjoint ys zs';
-     (u, VarSet.union ys zs')
+     begin
+       match matching_prod t with
+       | TyProd (_, t1,t2) ->
+          let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
+          let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+          assert_disjoint ys zs';
+          (u, VarSet.union ys zs')
+       | _ -> assert false
+     end
 
   | Fork e ->
      let t, xs = ty_exp tyenv e in

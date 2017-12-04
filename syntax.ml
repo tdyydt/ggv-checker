@@ -189,8 +189,8 @@ type exp =
   | Fun of mult * id * ty * exp
   | App of exp * exp
   | PairCons of mult * exp * exp
-  (* let x:T1, y:T2 = e1 in e2 *)
-  | PairDest of id * ty * id * ty * exp * exp
+  (* let x, y = e1 in e2 *)
+  | PairDest of id * id * exp * exp
   | Fork of exp
   (* create both channel endpoints,
    * whose types are session & dual(session) *)

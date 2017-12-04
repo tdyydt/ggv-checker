@@ -55,16 +55,16 @@ expr :
   | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr { Fun(m,x,t,e) }
  (* 型注釈なし？要調査
   * 注釈が無かったら、推論しないと行けないのは、確かでは？ *)
-  | LET LPAREN x=ID t1=ty_annot RPAREN COMMA
-        LPAREN y=ID t2=ty_annot RPAREN EQ e=plus_expr
-    IN f=expr { PairDest(x,t1,y,t2,e,f) }
+  | LET x=ID COMMA y=ID EQ e=plus_expr
+    IN f=expr { PairDest(x,y,e,f) }
 
   (* let (x:t) = e in f
    * is equivalent to
    * (fun lin (x:t) -> f) e *)
-  | LET LPAREN x=ID t=ty_annot RPAREN EQ e=plus_expr
-    IN f=expr { App (Fun(Lin,x,t,f), e) }
-  (* TODO: let 式は primitive として追加して、型推論する？ *)
+  (* | LET LPAREN x=ID t=ty_annot RPAREN EQ e=plus_expr
+   *   IN f=expr { App (Fun(Lin,x,t,f), e) } *)
+  (* TODO: let 式は primitive として追加しないといけない
+   * 追加すれば e を先に型付けすることで、tが分かる (注釈不要) *)
 
   | CASE e=plus_expr OF
     LBRACE br=separated_list(SEMI, branch) RBRACE
