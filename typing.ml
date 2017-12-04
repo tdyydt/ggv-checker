@@ -60,12 +60,10 @@ let matching_receive = function
   | (TySession TyDC | TyDyn) -> TySession (TyReceive (TyDyn, TyDC))
   | _ -> ty_err "matching error: receive"
 
-let matching_select = function
-  | TySession (TySelect _) as ty -> ty
-  (* ラベル li と、添字集合 I の選び方？ *)
-  (* select の場合は、 *)
-  | (TySession TyDC | TyDyn) -> todo ()
-     (* TySession (TySelect []) *)
+let matching_select t l = match t with
+  | TySession (TySelect br) -> br
+  (* TySelect {l : TyDC } *)
+  | (TySession TyDC | TyDyn) -> [(l, TyDC)]
   | _ -> ty_err "matching error: select"
 
 let matching_case = function
@@ -282,14 +280,21 @@ let rec ty_exp tyenv = function
 
   | Select (l,e) ->
      let t, xs = ty_exp tyenv e in
+     let br = matching_select t l in
+     (* check if label l is in branches *)
+     (* l が入っているか？ *)
+     (* if List.mem_assoc l br then *)
      begin
-       (* matching 関数に l を渡さないと、
-        * DC |> +{l:DC} は出来ない *)
-       match matching_select t with
-       | _ -> todo ()
+       try
+         let s = List.assoc l br in (TySession s, xs)
+       with
+       | Not_found ->
+          (* l が入っていないということ *)
+          ty_err "label is not in branches"
      end
 
-  | Case _ -> todo ()
+  (* br=branch *)
+  | Case (e, brs) -> todo ()
 
   | Close e ->
      let t, xs = ty_exp tyenv e in
