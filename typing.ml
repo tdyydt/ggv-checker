@@ -91,6 +91,7 @@ let matching_wait = function
  *   let tys = todo () in
  *   List.for_all (fun t -> mult_of_ty t = m) tys *)
 
+(*
 (* Env を参照する、どこで定義すべきか？？ *)
 (* check if m(tyenv) holds *)
 let un_tyenv tyenv =
@@ -102,7 +103,7 @@ let un_tyenv tyenv =
 let lin_tyenv tyenv =
   let tys = Environment.values tyenv in
   List.for_all lin tys
-
+*)
 
 let assert_disjoint xs ys =
   let zs = VarSet.inter xs ys in
@@ -227,6 +228,8 @@ let rec ty_exp tyenv = function
   | PairDest (x1,x2,e,f) ->
      let t, ys = ty_exp tyenv e in
      let _, t1, t2 = matching_prod t in
+     (* TODO: x1,x2 が既に定義されてる変数で、上書きの場合
+      * remove の辺りが不十分か *)
      let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
      (* remove x1, x2 *)
      let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
@@ -307,3 +310,15 @@ let rec ty_exp tyenv = function
      let t, xs = ty_exp tyenv e in
      let () = matching_wait t in
      (TyUnit, xs)
+
+
+(* well-typed or ill-typed (bool) *)
+(* proc -> tyenv -> bool *)
+let rec ty_proc tyenv = function
+  | Exp e ->
+     let t, xs = ty_exp tyenv e in
+     (* un t *)
+     (* xs = linear_vars(tyenv) になるのでは？ *)
+     todo ()
+  | Par (p,q) -> todo ()
+  | NuBind (c,d,p) -> todo ()
