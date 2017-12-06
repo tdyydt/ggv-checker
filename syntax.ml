@@ -147,7 +147,7 @@ and con_sub_session s r = match s,r with
      con_sub_ty t1 t2
      && con_sub_session s1 s2
   (* TODO: select,case が考えないといけない *)
-  | TySelect _, TySelect _ -> todo ()
+  | TySelect brs1, TySelect brs2 -> todo ()
   | TyCase _, TyCase _ -> todo ()
   | TyClose, TyClose -> true
   | TyWait, TyWait -> true
@@ -207,4 +207,5 @@ type exp =
 type proc =
   | Exp of exp
   | Par of proc * proc
-  | NuBind of id * id * proc
+  (* (nu (c:S),d) P *)
+  | NuBind of id * id * session* proc

@@ -41,9 +41,12 @@ toplevel :
 
 proc :
   | p=proc VBAR q=primary_proc { Par(p,q) }
-    (* (nu c,d) P | Q
+    (* (nu (c:S),d) P | Q
      * カッコを付けたい*)
-  | LPAREN NU c=ID COMMA d=ID RPAREN p=proc { NuBind(c,d,p) }
+    (* (nu c,d,s ) P 等でも良さそう *)
+  | LPAREN NU LPAREN c=ID COLON s=session RPAREN COMMA
+    d=ID RPAREN LPAREN p=proc RPAREN
+    { NuBind(c,d,s,p) }
   | p=primary_proc { p }
 
 primary_proc :
