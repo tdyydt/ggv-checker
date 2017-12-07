@@ -65,6 +65,7 @@ rule main = parse
 (* | "<" { P.LT } *)
 (* | ">" { P.GT } *)
 
+(* TODO: 大文字2文字目以降は許容しては？ *)
 | ['a'-'z'] ['a'-'z' '0'-'9' '_' '\'']*
     { let id = Lexing.lexeme lexbuf in
       try

@@ -161,10 +161,16 @@ let rec ty_exp tyenv = function
       * LAnd 等も binop に入れて良いのでは？ *)
 
   | Fun (Lin,x,t,e) ->
+     (* 変数名の上書きを(一時的に)禁止 *)
+     assert (not (E.mem x tyenv));
+
      let u, ys = ty_exp (E.add x t tyenv) e in
      (TyFun (Lin,t,u), VarSet.remove x ys)
 
   | Fun (Un,x,t,e) ->
+     (* 変数名の上書きを(一時的に)禁止 *)
+     assert (not (E.mem x tyenv));
+
      (* un 関数を作るため、
       * e に lin 変数が含まれていないこと *)
      let u, ys = ty_exp (E.add x t tyenv) e in
@@ -219,21 +225,35 @@ let rec ty_exp tyenv = function
    *    (u, VarSet.union ys zs') *)
 
   | PairDest (x1,x2,e,f) ->
-     let t, ys = ty_exp tyenv e in
-     let _, t1, t2 = matching_prod t in
      (* TODO: x1,x2 が既に定義されてる変数で、上書きの場合
       * remove の辺りが不十分か *)
+     (* ===> *)
+     (* 変数名の上書きを(一時的に)禁止 *)
+     assert (not (E.mem x1 tyenv));
+     assert (not (E.mem x2 tyenv));
+
+     let t, ys = ty_exp tyenv e in
+     let _, t1, t2 = matching_prod t in
      let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
-     (* remove x1, x2 *)
-     let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
-     assert_disjoint ys zs';
-     (u, VarSet.union ys zs')
+
+     (* x1,x2 のうち linear なものは、全て使われていないとダメ *)
+     if lin t1 && not (VarSet.mem x1 zs)
+     then ty_err ("linear variable is not used: " ^ x1)
+     else if lin t2 && not (VarSet.mem x2 zs)
+     then ty_err ("linear variable is not used: " ^ x2)
+     else
+       (* remove x1, x2 *)
+       let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+       assert_disjoint ys zs';
+       (u, VarSet.union ys zs')
 
   | Fork e ->
      let t, xs = ty_exp tyenv e in
      let _ = matching_unit t in
      (* assert VarSet.is_empty xs ?? *)
-     (TyUnit, xs)
+     if VarSet.is_empty xs
+     then (TyUnit, xs)
+     else ty_err "cannot contain linear variables: fork"
 
   | New s ->
      (TyProd (Lin, TySession s, TySession (dual s)),
@@ -283,6 +303,9 @@ let rec ty_exp tyenv = function
            List.map (fun (l,x,f) ->
                let s = List.assoc l ty_brs in
                let u, ys = ty_exp (E.add x (TySession s) tyenv) f in
+
+               (* TODO: x は linear変数なので、使われないといけない *)
+
                (u, VarSet.remove x ys))
              brs in
          (* ys[i] たちは bigUnion を取る。
@@ -331,4 +354,5 @@ let rec ty_proc tyenv = function
      let tyenv' = (E.add c (TySession s)
                      (E.add d (TySession (dual s)) tyenv)) in
      let _ = ty_proc tyenv' p in
+     (* TODO: c,d は linear 変数なので使われないといけない *)
      todo ()
