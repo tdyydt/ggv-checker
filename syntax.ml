@@ -184,10 +184,12 @@ type exp =
   (* integer, bool literal *)
   | BinOp of binOp * exp * exp
 
-  (* fun m (x:T) -> e *)
+
   (* 規則では Abs *)
-  | Fun of mult * id * ty * exp
+  | Fun of mult * id * ty * exp   (* fun m (x:T) -> e *)
   | App of exp * exp
+  | Let of id * exp * exp       (* let x = e in f *)
+
   | PairCons of mult * exp * exp
   (* let x, y = e1 in e2 *)
   | PairDest of id * id * exp * exp

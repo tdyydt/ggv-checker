@@ -20,6 +20,7 @@ let remove x env = M.remove x env
 
 let find x env = M.find x env
 
+let mem = M.mem
 
 (* keys, values *)
 (* dom, codom(range) *)

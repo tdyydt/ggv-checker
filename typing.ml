@@ -180,6 +180,18 @@ let rec ty_exp tyenv = function
      then (t12, VarSet.union xs ys)
      else ty_err "not consistent subtype: app"
 
+  | Let (x,e,f) ->
+     (* 変数名の上書きを(一時的に)禁止 *)
+     assert (not (E.mem x tyenv));
+
+     let t, xs = ty_exp tyenv e in
+     let u, ys = ty_exp (E.add x t tyenv) f in
+     (* lin(t) の場合、 ys の中に x が入っているべき *)
+     if lin t && not (VarSet.mem x ys)
+                     (* x が linear なのに使われない *)
+     then ty_err ("linear variable is not used: " ^ x)
+     else (u, VarSet.remove x ys)
+
   | PairCons (Lin,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
