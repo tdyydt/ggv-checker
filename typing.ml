@@ -146,7 +146,6 @@ let rec ty_exp tyenv = function
   | IntV _ -> (TyInt, VarSet.empty)
   | BoolV _ -> (TyBool, VarSet.empty)
 
-  (* TODO: fix, consider LT *)
   (* rename? arithmetic operation ?? *)
   | BinOp (op, e1, e2) ->
      let t1, xs = ty_exp tyenv e1 in
@@ -155,20 +154,11 @@ let rec ty_exp tyenv = function
      let _ = matching_int t1, matching_int t2 in
      (TyInt, VarSet.union xs ys)
 
-     (* TODO: un_tyenv tyenv ?? が必要か？？？？*)
+  (* TODO: LT 等も入れるか？？ if を入れる時で良さそう。 *)
      (* op の種類に依る。
       * Lt とかもありえる
       * t1,t2 が int か確かめる等
       * LAnd 等も binop に入れて良いのでは？ *)
-
-  (* | Fun (m,x,t,e) ->
-   *    let u, ys = ty_exp (E.add x t tyenv) e in
-   *    (\* m :> (Gamma) *\)
-   *    if m = Lin || un_tyenv tyenv
-   *      (\* remove x from ys, if included *\)
-   *    then (TyFun (m,t,u), VarSet.remove x ys)
-   *    (\* gamma に入っているだけで、実際に使われているかは、言い切れない *\)
-   *    else ty_err "unrestricted functions cannot contain variables of a linear type" *)
 
   | Fun (Lin,x,t,e) ->
      let u, ys = ty_exp (E.add x t tyenv) e in
@@ -190,23 +180,14 @@ let rec ty_exp tyenv = function
      then (t12, VarSet.union xs ys)
      else ty_err "not consistent subtype: app"
 
-  (* m = Un であったら、
-   * xs,ysはから出ないといけない。*)
-  (* | PairCons (m,e1,e2) ->
-   *    let t1, xs = ty_exp tyenv e1 in
-   *    let t2, ys = ty_exp tyenv e2 in
-   *    assert_disjoint xs ys;
-   *    (\* m :> (t1) /\ m :> (t2) *\)
-   *    if m = Lin || (un t1 && un t2)
-   *    then (TyProd (m,t1,t2), VarSet.union xs ys)
-   *    else ty_err "unrestricted pairs cannot contain linear varialbes" *)
-
   | PairCons (Lin,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
      (TyProd (Lin,t1,t2), VarSet.union xs ys)
 
+  (* m = Un であったら、
+   * xs,ysは空でないといけない。*)
   | PairCons (Un,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
@@ -294,7 +275,7 @@ let rec ty_exp tyenv = function
              brs in
          (* ys[i] たちは bigUnion を取る。
           * u[i] たちは等しいはず
-          * assertEq かい？ *)
+          * assertEq か？ *)
          todo ()
        with
        (* どこかの部分式でエラーが起きた場合 *)
