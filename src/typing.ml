@@ -328,32 +328,3 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t, xs = ty_exp tyenv e in
      let () = matching_wait t in
      (TyUnit, xs)
-
-
-(* well-typed or ill-typed (bool) *)
-(* ill-typed だったらエラーを投げて、
- * well-typed だったら unit でも返す？ *)
-(* used vars も返すならば、unit相当は不要になる *)
-
-(* proc -> tyenv -> bool *)
-let rec ty_proc tyenv = function
-  | Exp e ->
-     let t, xs = ty_exp tyenv e in
-     if un t then todo ()
-                       (* lin なものが使わずに捨てられる *)
-     else ty_err "violation of linearity: exp"
-     (* un t *)
-     (* xs = linear_vars(tyenv) になるのでは？ *)
-     todo ()
-  | Par (p,q) ->
-     (* ここでも env splitting がある。 *)
-     let _ = ty_proc tyenv p in
-     let _ = ty_proc tyenv q in
-     (* ty_proc でエラーにならなければ、型がつく *)
-     todo ()
-  | NuBind (c,d,s,p) ->
-     let tyenv' = (E.add c (TySession s)
-                     (E.add d (TySession (dual s)) tyenv)) in
-     let _ = ty_proc tyenv' p in
-     (* TODO: c,d は linear 変数なので使われないといけない *)
-     todo ()

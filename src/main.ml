@@ -5,11 +5,9 @@ open Typing
 let rec read_eval_print tyenv =
   print_string "# ";
   flush stdout;
+  let lexbuf = Lexing.from_channel stdin in
   try
-    let proc = Parser.toplevel Lexer.main (Lexing.from_channel stdin) in
-    (* とりあえず Exp だけを想定 *)
-    let Exp exp = proc in
-    (* let () = ty_proc *)
+    let exp = Parser.toplevel Lexer.main lexbuf in
     let ty, _ = ty_exp tyenv exp in
     (* Printf.printf "" *)
     print_string (string_of_ty ty);

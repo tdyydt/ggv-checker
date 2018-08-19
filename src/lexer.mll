@@ -4,20 +4,16 @@ module P = Parser
 let reservedWords = [
     ("lin", P.LIN);
     ("un", P.UN);
-
     ("unit", P.UNIT);
     ("int", P.INT);
     ("bool", P.BOOL);
     ("end", P.END);
-
     ("true", P.TRUE);
     ("false", P.FALSE);
-
     ("fun", P.FUN);
     ("let", P.LET);
     ("in", P.IN);
-
-    ("fork", P.FORK);
+    ("fork", P.FORK);           (* communication *)
     ("new", P.NEW);
     ("send", P.SEND);
     ("receive", P.RECEIVE);
@@ -26,8 +22,6 @@ let reservedWords = [
     ("of", P.OF);
     ("close", P.CLOSE);
     ("wait", P.WAIT);
-
-    ("nu", P.NU);
   ]
 
 }

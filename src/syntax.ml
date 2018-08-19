@@ -181,10 +181,3 @@ type exp =
   | CaseExp of exp * (label * id * exp) list
   | CloseExp of exp
   | WaitExp of exp
-
-
-type proc =
-  | Exp of exp
-  | Par of proc * proc
-  (* (nu (c:S),d) P *)
-  | NuBind of id * id * session* proc

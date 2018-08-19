@@ -19,32 +19,16 @@ open Syntax
 %token FORK NEW SEND RECEIVE
 %token SELECT CLOSE WAIT
 %token CASE OF SEMI
-%token NU VBAR
 
 %token <int> INTV
 %token <Syntax.id> ID
 
 %start toplevel
-%type <Syntax.proc> toplevel
+%type <Syntax.exp> toplevel
 %%
 
 toplevel :
-  | p=proc SEMISEMI { p }
-
-proc :
-  | p=proc VBAR q=primary_proc { Par(p,q) }
-    (* (nu (c:S),d) P | Q
-     * カッコを付けたい*)
-    (* (nu c,d,s ) P 等でも良さそう *)
-  | LPAREN NU LPAREN c=ID COLON s=session RPAREN COMMA
-    d=ID RPAREN LPAREN p=proc RPAREN
-    { NuBind(c,d,s,p) }
-  | p=primary_proc { p }
-
-primary_proc :
-  (* <e> も有り得る。 *)
-  | e=expr { Exp e }
-  | LPAREN p=proc RPAREN { p }
+  | e=expr SEMISEMI { e }
 
 expr :
   (* parentheses needed ?? *)
