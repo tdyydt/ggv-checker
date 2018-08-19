@@ -3,29 +3,32 @@ exception Error of string
 let err s = raise (Error s)
 let todo () = err "Not implemented yet."
 
+open Printf
+
 (* AST of the surface language *)
 
 type id = string
 type label = string
 
-(* Types *********************************************)
+(*** Types ***)
 
 (* multiplicity *)
 type mult = Un | Lin
 
-(* prefix は T だけでも十分か *)
-(* mutual recursive types *)
+let string_of_mult = function
+  | Un -> "un"
+  | Lin -> "lin"
+
 type ty =
-  (* TODO: TyBase にしてもいい？
-   * ただ Unit は base type 以上の意味があるようにも *)
+  (* TODO: Add TyBase? *)
   | TyUnit
   | TyInt
   | TyBool
   | TySession of session
   | TyFun of mult * ty * ty
-  (* TyPair でも良いかも ??? *)
+  (* OR: TyPair? *)
   | TyProd of mult * ty * ty
-  | TyDyn
+  | TyDyn                       (* dynamic type *)
 
 (* session types *)
 and session =
@@ -35,52 +38,44 @@ and session =
   | TyCase of (label * session) list
   | TyClose
   | TyWait
-  | TyDC
+  | TyDC                        (* dynamic channel/session type *)
 
-let string_of_mult = function
-  | Un -> "un"
-  | Lin -> "lin"
-
-(* TODO: カッコを減らす *)
+(* TODO: reduce paren *)
 let rec string_of_ty = function
   | TyUnit -> "unit"
   | TyInt -> "int"
   | TyBool -> "bool"
   | TySession s -> string_of_session s
   | TyFun (m,t,u) ->
-     Printf.sprintf "(%s ->%s %s)"
+     sprintf "(%s ->%s %s)"
        (string_of_ty t) (string_of_mult m) (string_of_ty u)
   | TyProd (m,t,u) ->
-     Printf.sprintf "(%s *%s %s)"
+     sprintf "(%s *%s %s)"
        (string_of_ty t) (string_of_mult m) (string_of_ty u)
   | TyDyn -> "*"
 
 and string_of_session = function
   | TySend (t,s) ->
-     Printf.sprintf "(!%s.%s)"
-       (string_of_ty t) (string_of_session s)
+     sprintf "(!%s.%s)" (string_of_ty t) (string_of_session s)
   | TyReceive (t,s) ->
-     Printf.sprintf "(?%s.%s)"
-       (string_of_ty t) (string_of_session s)
+     sprintf "(?%s.%s)" (string_of_ty t) (string_of_session s)
   | TySelect brs ->
-     (* FIXME: 汚い *)
-     let s =
-       String.concat ", "
-         (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s) brs) in
-     Printf.sprintf "+{%s}" s
+     sprintf "+{%s}"
+       (String.concat ", "
+          (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s)
+             brs))
   | TyCase brs ->
-     let s =
-       String.concat ", "
-         (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s) brs) in
-     Printf.sprintf "&{%s}" s
+     sprintf "&{%s}"
+       (String.concat ", "
+          (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s)
+             brs))
   | TyClose -> "end!"
   | TyWait -> "end?"
   | TyDC -> "#"
 
 
 (* duality *)
-(* session -> session *)
-let rec dual = function
+let rec dual : session -> session = function
   | TySend (t,s) -> TyReceive (t, dual s)
   | TyReceive (t,s) -> TySend (t, dual s)
   | TySelect brs ->
@@ -91,7 +86,7 @@ let rec dual = function
   | TyWait -> TyClose
   | TyDC -> TyDC
 
-let mult_of_ty = function
+let mult_of_ty : ty -> mult = function
   | TyUnit -> Un
   | TyInt -> Un
   | TyBool -> Un
@@ -106,19 +101,15 @@ let lin ty = mult_of_ty ty = Lin
 let un ty = mult_of_ty ty = Un
 
 
-(* multiplicity order *)
-(* <= でも良い気もする。 *)
-(* m <: n *)
+(* multiplicity order: [m <: n] *)
 let sub_mult m n = match m,n with
   | Un, _ -> true
   | Lin, Lin -> true
   | Lin, Un -> false
 
 
-(* consistent subtyping *)
-(* ty -> ty -> bool *)
-(* let rec (<~) t u = match t,u with *)
-let rec con_sub_ty t u = match t,u with
+(* consistent subtyping: [t <~ u] *)
+let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
   (* | TyBase x, TyBase y when x = y -> true *)
   | TyUnit, TyUnit -> true
   | TyInt, TyInt -> true
@@ -134,12 +125,12 @@ let rec con_sub_ty t u = match t,u with
      && sub_mult m n
   | TyDyn, _ -> true
   | _, TyDyn -> true
-
-  (* そもそも、t,uのコンストラクタが異なる等 *)
+  (* e.g.) t,u has different type constructors *)
   | _ -> false
 
-(* session -> session -> bool *)
-and con_sub_session s r = match s,r with
+(* [s <~ r] *)
+and con_sub_session (s : session) (r : session) : bool =
+  match s,r with
   | TySend (t1,s1), TySend (t2,s2) ->
      con_sub_ty t2 t1
      && con_sub_session s1 s2
@@ -155,27 +146,15 @@ and con_sub_session s r = match s,r with
   | _, TyDC -> true
   | _ -> false
 
+(*** Programs ***)
 
-
-(* Programs *****************************************)
-
-(* TODO:
- * mult という名前で良いか,
- * m は Fun, ConsPair のどの位置に置くか,
- * syntax はどうしたら自然か？
- * Fun, ConsPair について lin と un の2通り作ることも考えられる。アリかも
- * ただ m を推論したいんだったら？
- *
- * with_position
- * *)
-
-(* NOTE:
- * コンストラクタの postfix の Exp は付けずに。
- * 代わりに prefix=E もありえる
- * *)
+(* NOTE: Where should I put m in Fun, PairCons?
+ * It is possible to use two constructors: for each lin and un
+ * but I want to infer m in the future. *)
 
 type binOp = Plus | Minus | Mult | Div (* | LT | Eq *)
 
+(* TODO: postfix Exp? *)
 type exp =
   | Var of id
   | UnitV
@@ -184,8 +163,7 @@ type exp =
   (* integer, bool literal *)
   | BinOp of binOp * exp * exp
 
-
-  (* 規則では Abs *)
+  (* OR: Abs *)
   | Fun of mult * id * ty * exp   (* fun m (x:T) -> e *)
   | App of exp * exp
   | Let of id * exp * exp       (* let x = e in f *)

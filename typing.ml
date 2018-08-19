@@ -1,90 +1,87 @@
 open Syntax
-module E = Environment
 
+module E = Environment
 type tyenv = ty E.t
 
 (* set of variable *)
-(* IdSet, VarSet Variables *)
+(* OR: IdSet, Variables *)
 module VarSet =
   Set.Make(
       struct
         type t = id
-        let compare = compare
+        let compare (x : id) y = compare x y
       end
     )
 
 exception Typing_error of string
 let ty_err s = raise (Typing_error s)
 
+(*** Matching ***)
 
-(**************************************************)
-(* TODO: どのファイルに定義すべきか？
- * Syntax に移すかもしれない
- * translation 等でも使うため *)
-(* TODO: ty_err じゃなくて、matching_err とかのほうがいい？ *)
+(* matching doesn't return type itself,
+ * but arguments of the type constructor.
+ * unit value () if no arguments *)
 
-(* 型を返すのではなく、
- * 型コンストラクタの引数を返す。
- * 引数が無い時は () を返す *)
-
-(* matching_base ?????? *)
+(* OR: matching_base *)
 let matching_unit = function
-  | (TyUnit | TyDyn) -> ()
+  | TyUnit | TyDyn -> ()
   | _ -> ty_err "matching error: unit"
 
 let matching_int = function
-  | (TyInt | TyDyn) -> ()
+  | TyInt | TyDyn -> ()
   | _ -> ty_err "matching error: int"
 
 let matching_bool = function
-  | (TyBool | TyDyn) -> ()
+  | TyBool | TyDyn -> ()
   | _ -> ty_err "matching error: bool"
 
-let matching_fun = function
+let matching_fun : ty -> mult * ty * ty = function
   | TyFun (m,t,u) -> (m,t,u)
-  | TyDyn -> (Lin, TyDyn, TyDyn)
+  | TyDyn -> (Lin,TyDyn,TyDyn)
   | _ -> ty_err "matching error: fun"
 
-let matching_prod = function
+let matching_prod : ty -> mult * ty * ty  = function
   | TyProd (m,t,u) -> (m,t,u)
-  | TyDyn -> (Lin, TyDyn, TyDyn)
+  | TyDyn -> (Lin,TyDyn,TyDyn)
   | _ -> ty_err "matching error: prod"
 
-(* ty -> ty * session *)
-let matching_send = function
+let matching_send : ty -> ty * session = function
   | TySession (TySend (t,s)) -> (t,s)
-  | (TySession TyDC | TyDyn) -> (TyDyn, TyDC)
+  | (TySession TyDC) | TyDyn -> (TyDyn, TyDC)
   | _ -> ty_err "matching error: send"
 
-let matching_receive = function
+let matching_receive : ty -> ty * session = function
   | TySession (TyReceive (t,s)) -> (t,s)
-  | (TySession TyDC | TyDyn) -> (TyDyn, TyDC)
+  | (TySession TyDC) | TyDyn -> (TyDyn, TyDC)
   | _ -> ty_err "matching error: receive"
 
-let matching_select t l = match t with
+let matching_select (t : ty) (l : label) : (label * session) list =
+  match t with
   | TySession (TySelect br) -> br
-  (* TySelect {l : TyDC } *)
-  | (TySession TyDC | TyDyn) -> [(l, TyDC)]
+  (* (+){l : TyDC } *)
+  | (TySession TyDC) | TyDyn -> [(l, TyDC)]
   | _ -> ty_err "matching error: select"
 
-let matching_case t ls = match t with
+let matching_case (t : ty) (ls : label list) : (label * session) list =
+  match t with
   | TySession (TyCase br) -> br
-  | (TySession TyDC | TyDyn) ->
+  | (TySession TyDC) | TyDyn ->
      List.map (fun l -> (l, TyDC)) ls
   | _ -> ty_err "matching error: case"
 
 let matching_close = function
   | TySession TyClose -> ()
-  | (TySession TyDC | TyDyn) -> ()
+  | (TySession TyDC) | TyDyn -> ()
   | _ -> ty_err "matching error: close"
 
 let matching_wait = function
   | TySession TyWait -> ()
-  | (TySession TyDC | TyDyn) -> ()
+  | (TySession TyDC) | TyDyn -> ()
   | _ -> ty_err "matching error: wait"
 
 
-(**************************************************)
+(*** type checking ***)
+
 (* TODO: better name ?? *)
 (* let mult_tyenv m tyenv =
  *   (\* tyenv から tys だけ取り出す。 *\)
@@ -105,13 +102,13 @@ let lin_tyenv tyenv =
   List.for_all lin tys
 *)
 
-let assert_disjoint xs ys =
+let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
   let zs = VarSet.inter xs ys in
+  (* display zs? *)
+  (* violation of linearity *)
   if VarSet.is_empty zs then ()
-                               (* zs を表示すれば良さそう。 *)
-                               (* violation of linearity *)
-                               (* 関数の名前から、specific すぎるエラーはどうなのか？ *)
   else ty_err "Not disjoint sets"
+
 (* VarSet.t -> VarSet.t -> bool *)
 (* let is_disjoint xs ys =
  *   VarSet.is_empty (VarSet.inter xs ys) *)
@@ -132,8 +129,8 @@ let assert_disjoint xs ys =
  * *)
 
 (* returns the set of linear type variables used in typing *)
-(* tyenv -> exp -> ty * VarSet.t *)
-let rec ty_exp tyenv = function
+let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
+  match e with
   | Var x -> begin
       try
         let t = E.find x tyenv in
@@ -181,6 +178,7 @@ let rec ty_exp tyenv = function
   | App (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
+     assert_disjoint xs ys;
      let m, t11, t12 = matching_fun t1 in
      if con_sub_ty t2 t11
      then (t12, VarSet.union xs ys)
@@ -311,6 +309,9 @@ let rec ty_exp tyenv = function
          (* ys[i] たちは bigUnion を取る。
           * u[i] たちは等しいはず
           * assertEq か？ *)
+         (* => そうではなくて、
+          * 等しくなくても subtype 関係であればいいので、
+          * もっとも super な型を取る操作をやればいい *)
          todo ()
        with
        (* どこかの部分式でエラーが起きた場合 *)

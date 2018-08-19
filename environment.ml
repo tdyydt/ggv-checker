@@ -1,11 +1,8 @@
-(* これで、本当に出来ているのか？
- * TODO: mli を作る *)
-
 module M =
   Map.Make (
       struct
         type t = Syntax.id
-        let compare = compare
+        let compare (x : Syntax.id) y = compare x y
       end
     )
 
