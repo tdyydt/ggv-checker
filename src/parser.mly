@@ -58,17 +58,17 @@ expr :
   (* parentheses needed ?? *)
   (* fun (x:T) -> e *)
   | FUN m=mult LPAREN x=ID t=ty_annot RPAREN RARROW e=expr
-    { Fun(m,x,t,e) }
+    { FunExp(m,x,t,e) }
 
   | LET x=ID COMMA y=ID EQ e=plus_expr IN f=expr
     { PairDest(x,y,e,f) }
 
   (* let expression *)
-  | LET x=ID EQ e=plus_expr IN f=expr { Let (x,e,f) }
+  | LET x=ID EQ e=plus_expr IN f=expr { LetExp (x,e,f) }
 
   | CASE e=plus_expr OF
     LBRACE br=separated_list(SEMI, branch) RBRACE
-    { Case (e,br) }
+    { CaseExp (e,br) }
 
   | e=plus_expr { e }
 
@@ -88,23 +88,23 @@ mult_expr :
   | e=app_expr { e }
 
 app_expr :
-  | e1=app_expr e2=primary_expr { App(e1,e2) }
-  | FORK e=primary_expr { Fork e }
-  | NEW LPAREN s=session RPAREN { New s } (* 結合順位これで良い?? *)
-  | SEND e=primary_expr f=primary_expr { Send(e,f) }
-  | RECEIVE e=primary_expr { Receive e }
-  | SELECT l=ID e=primary_expr { Select(l,e) }
-  | CLOSE e=primary_expr { Close e }
-  | WAIT e=primary_expr { Wait e }
+  | e1=app_expr e2=primary_expr { AppExp(e1,e2) }
+  | FORK e=primary_expr { ForkExp e }
+  | NEW LPAREN s=session RPAREN { NewExp s } (* 結合順位これで良い?? *)
+  | SEND e=primary_expr f=primary_expr { SendExp(e,f) }
+  | RECEIVE e=primary_expr { ReceiveExp e }
+  | SELECT l=ID e=primary_expr { SelectExp (l,e) }
+  | CLOSE e=primary_expr { CloseExp e }
+  | WAIT e=primary_expr { WaitExp e }
   | e=primary_expr { e }
 
 
 (* aexpr と同じ  *)
 primary_expr :
-  | LPAREN RPAREN { UnitV }
-  | v=INTV { IntV v }
-  | TRUE { BoolV true }
-  | FALSE { BoolV false }
+  | LPAREN RPAREN { ULit }
+  | v=INTV { ILit v }
+  | TRUE { BLit true }
+  | FALSE { BLit false }
   | x=ID { Var x }
   (* multのつけ場所 ?? *)
   | LPAREN e1=plus_expr COMMA e2=plus_expr RPAREN m=mult { PairCons(m,e1,e2) }

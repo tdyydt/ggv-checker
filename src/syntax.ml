@@ -157,31 +157,30 @@ type binOp = Plus | Minus | Mult | Div (* | LT | Eq *)
 (* TODO: postfix Exp? *)
 type exp =
   | Var of id
-  | UnitV
-  | IntV of int
-  | BoolV of bool
-  (* integer, bool literal *)
+  | ULit                        (* unit: () *)
+  | ILit of int
+  | BLit of bool
   | BinOp of binOp * exp * exp
 
   (* OR: Abs *)
-  | Fun of mult * id * ty * exp   (* fun m (x:T) -> e *)
-  | App of exp * exp
-  | Let of id * exp * exp       (* let x = e in f *)
+  | FunExp of mult * id * ty * exp   (* \m (x:T) -> e *)
+  | AppExp of exp * exp
+  | LetExp of id * exp * exp       (* let x = e1 in e2 *)
 
   | PairCons of mult * exp * exp
   (* let x, y = e1 in e2 *)
   | PairDest of id * id * exp * exp
-  | Fork of exp
+  | ForkExp of exp
   (* create both channel endpoints,
    * whose types are session & dual(session) *)
-  | New of session
-  | Send of exp * exp
-  | Receive of exp
-  | Select of label * exp
+  | NewExp of session
+  | SendExp of exp * exp
+  | ReceiveExp of exp
+  | SelectExp of label * exp
   (* FIXME: branch を置き換えよ *)
-  | Case of exp * (label * id * exp) list
-  | Close of exp
-  | Wait of exp
+  | CaseExp of exp * (label * id * exp) list
+  | CloseExp of exp
+  | WaitExp of exp
 
 
 type proc =

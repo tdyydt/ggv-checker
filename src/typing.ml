@@ -139,9 +139,9 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
       with
       | Not_found -> ty_err ("the variable " ^ x ^ " is not bound")
     end
-  | UnitV -> (TyUnit, VarSet.empty)
-  | IntV _ -> (TyInt, VarSet.empty)
-  | BoolV _ -> (TyBool, VarSet.empty)
+  | ULit -> (TyUnit, VarSet.empty)
+  | ILit _ -> (TyInt, VarSet.empty)
+  | BLit _ -> (TyBool, VarSet.empty)
 
   (* rename? arithmetic operation ?? *)
   | BinOp (op, e1, e2) ->
@@ -157,14 +157,14 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
       * t1,t2 が int か確かめる等
       * LAnd 等も binop に入れて良いのでは？ *)
 
-  | Fun (Lin,x,t,e) ->
+  | FunExp (Lin,x,t,e) ->
      (* 変数名の上書きを(一時的に)禁止 *)
      assert (not (E.mem x tyenv));
 
      let u, ys = ty_exp (E.add x t tyenv) e in
      (TyFun (Lin,t,u), VarSet.remove x ys)
 
-  | Fun (Un,x,t,e) ->
+  | FunExp (Un,x,t,e) ->
      (* 変数名の上書きを(一時的に)禁止 *)
      assert (not (E.mem x tyenv));
 
@@ -175,7 +175,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      then (TyFun (Un,t,u), VarSet.remove x ys)
      else ty_err "unrestricted functions cannot contain variables of a linear type"
 
-  | App (e1,e2) ->
+  | AppExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
@@ -184,7 +184,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      then (t12, VarSet.union xs ys)
      else ty_err "not consistent subtype: app"
 
-  | Let (x,e,f) ->
+  | LetExp (x,e,f) ->
      (* 変数名の上書きを(一時的に)禁止 *)
      assert (not (E.mem x tyenv));
 
@@ -245,7 +245,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
        assert_disjoint ys zs';
        (u, VarSet.union ys zs')
 
-  | Fork e ->
+  | ForkExp e ->
      let t, xs = ty_exp tyenv e in
      let _ = matching_unit t in
      (* assert VarSet.is_empty xs ?? *)
@@ -253,11 +253,11 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      then (TyUnit, xs)
      else ty_err "cannot contain linear variables: fork"
 
-  | New s ->
+  | NewExp s ->
      (TyProd (Lin, TySession s, TySession (dual s)),
       VarSet.empty)
 
-  | Send (e1,e2) ->
+  | SendExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
@@ -266,12 +266,12 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      then (TySession s, VarSet.union xs ys)
      else ty_err "Not consistent subtype: send"
 
-  | Receive e ->
+  | ReceiveExp e ->
      let t1, xs = ty_exp tyenv e in
      let t2, s = matching_receive t1 in
      (TyProd (Lin, t2, TySession s), xs)
 
-  | Select (l,e) ->
+  | SelectExp (l,e) ->
      let t, xs = ty_exp tyenv e in
      let br = matching_select t l in
      begin
@@ -287,7 +287,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      end
 
   (* br=branch *)
-  | Case (e, brs) ->
+  | CaseExp (e, brs) ->
      let t, xs = ty_exp tyenv e in
      (* pick up labels *)
      let ls = List.map (fun (l,_,_) -> l) brs in
@@ -319,12 +319,12 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      end
 
 
-  | Close e ->
+  | CloseExp e ->
      let t, xs = ty_exp tyenv e in
      let () = matching_close t in
      (TyUnit, xs)
 
-  | Wait e ->
+  | WaitExp e ->
      let t, xs = ty_exp tyenv e in
      let () = matching_wait t in
      (TyUnit, xs)
