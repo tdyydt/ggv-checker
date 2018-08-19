@@ -6,28 +6,20 @@ open Syntax
 %token LPAREN RPAREN
 %token LBRACE RBRACE
 
-%token PLUS MINUS
-(* %token LT *)
-%token STAR HASH
-%token TRUE FALSE
-
 %token LIN UN
 %token UNIT INT BOOL
+%token BANG QU AMP
+%token END PERIOD COMMA
 
-%token PL QU                    (* pling!, question? *)
-%token AMP                      (* ampersand& *)
-%token END
-%token PERIOD COMMA
-
+%token PLUS MINUS STAR HASH
+(* %token LT *)
+%token TRUE FALSE
 %token LET IN EQ
 %token FUN RARROW COLON
-
 %token FORK NEW SEND RECEIVE
 %token SELECT CLOSE WAIT
 %token CASE OF SEMI
-
-%token NU
-%token VBAR
+%token NU VBAR
 
 %token <int> INTV
 %token <Syntax.id> ID
@@ -130,7 +122,7 @@ primary_ty :
   | LPAREN t=ty RPAREN { t }
 
 session :
-  | PL t=primary_ty PERIOD s=session { TySend(t,s) }
+  | BANG t=primary_ty PERIOD s=session { TySend(t,s) }
   | QU t=primary_ty PERIOD s=session { TyReceive(t,s) }
 
   | PLUS LBRACE br=separated_list(COMMA, branch_ty) RBRACE { TySelect br }
@@ -141,7 +133,7 @@ branch_ty :
   | l=ID COLON s=session { (l,s) }
 
 primary_session :
-  | END PL { TyClose }
+  | END BANG { TyClose }
   | END QU { TyWait }
   | HASH { TyDC }
   | LPAREN s=session RPAREN { s }

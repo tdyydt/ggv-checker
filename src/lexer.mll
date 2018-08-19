@@ -48,9 +48,9 @@ rule main = parse
 | "}" { P.RBRACE }
 
 | "->" { P.RARROW }
-| "!" { P.PL }
-| "?" { P.QU }
-| "&" { P.AMP }
+| "!" { P.BANG }
+| "?" { P.QU }                  (* question mark *)
+| "&" { P.AMP }                 (* ampersand *)
 | ":" { P.COLON }
 | ";" { P.SEMI }
 | "." { P.PERIOD }
