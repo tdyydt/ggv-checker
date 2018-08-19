@@ -53,6 +53,7 @@ rule main = parse
 | "+" { P.PLUS }
 | "-" { P.MINUS }
 | "*" { P.STAR }
+| "/" { P.SLASH }
 | "#" { P.HASH }
 
 | "=" { P.EQ }
