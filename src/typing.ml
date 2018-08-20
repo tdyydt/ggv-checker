@@ -290,7 +290,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   | CaseExp (e, brs) ->
      let t, xs = ty_exp tyenv e in
      (* pick up labels *)
-     let ls = List.map (fun (l,_,_) -> l) brs in
+     let ls = List.map (fun (l,_,_,_) -> l) brs in
      let ty_brs = matching_case t ls in
      begin
        try
@@ -298,7 +298,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
           * その型付けで用いた linear 変数集合 ys[i]
           * の組たちのリスト *)
          let _ =
-           List.map (fun (l,x,f) ->
+           List.map (fun (l,x,_,f) ->
                let s = List.assoc l ty_brs in
                let u, ys = ty_exp (E.add x (TySession s) tyenv) f in
 

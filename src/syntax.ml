@@ -177,7 +177,6 @@ type exp =
   | SendExp of exp * exp
   | ReceiveExp of exp
   | SelectExp of label * exp
-  (* FIXME: branch を置き換えよ *)
-  | CaseExp of exp * (label * id * exp) list
+  | CaseExp of exp * (label * id * session * exp) list
   | CloseExp of exp
   | WaitExp of exp

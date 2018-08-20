@@ -74,7 +74,10 @@ para :
 
 (* case branch *)
 branch:
-  | l=ID COLON x=ID PERIOD e=expr { (l,x,e) }
+  (* TODO: PERIOD to RARROW ? *)
+  | l=ID LPAREN x=ID COLON s=session RPAREN PERIOD e=expr
+    { (l,x,s,e) }
+  (* add type annotation S *)
   (* | l=ID COLON LPAREN x=ID t=ty_annot RPAREN PERIOD e=expr *)
 
 minus_expr :
