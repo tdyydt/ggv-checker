@@ -51,6 +51,9 @@ let sub_mult m n = match m,n with
   | Lin, Lin -> true
   | Lin, Un -> false
 
+(* join/meet wrt. subtyping *)
+let rec join (s : session) (t : session) : session = todo ()
+and meet (s : session) (t : session) : session = todo ()
 
 (* consistent subtyping: [t <~ u] *)
 let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
@@ -96,18 +99,9 @@ and con_sub_session (s : session) (r : session) : bool =
  * but arguments of the type constructor.
  * unit value () if no arguments *)
 
-(* OR: matching_base *)
 let matching_unit = function
   | TyUnit | TyDyn -> ()
   | _ -> ty_err "matching error: unit"
-
-let matching_int = function
-  | TyInt | TyDyn -> ()
-  | _ -> ty_err "matching error: int"
-
-let matching_bool = function
-  | TyBool | TyDyn -> ()
-  | _ -> ty_err "matching error: bool"
 
 let matching_fun : ty -> mult * ty * ty = function
   | TyFun (m,t,u) -> (m,t,u)
@@ -202,6 +196,10 @@ let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
  * この判定がどこにも見えない。
  * *)
 
+(* type of binOp *)
+let ty_binop : binOp -> ty * ty * ty = function
+  | Plus | Minus | Mult | Div -> (TyInt, TyInt, TyInt)
+
 (* returns the set of linear type variables used in typing *)
 let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   match e with
@@ -217,19 +215,16 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   | ILit _ -> (TyInt, VarSet.empty)
   | BLit _ -> (TyBool, VarSet.empty)
 
-  (* rename? arithmetic operation ?? *)
   | BinOp (op, e1, e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     let _ = matching_int t1, matching_int t2 in
-     (TyInt, VarSet.union xs ys)
-
-  (* TODO: LT 等も入れるか？？ if を入れる時で良さそう。 *)
-     (* op の種類に依る。
-      * Lt とかもありえる
-      * t1,t2 が int か確かめる等
-      * LAnd 等も binop に入れて良いのでは？ *)
+     let u1, u2, u3 = ty_binop op in
+     if con_sub_ty t1 u1 then
+       if con_sub_ty t2 u2 then
+         (u3, VarSet.union xs ys)
+       else ty_err "T-BinOp-R"
+     else ty_err "T-BinOp-L"
 
   | FunExp (Lin,x,t,e) ->
      (* 変数名の上書きを(一時的に)禁止 *)
@@ -321,17 +316,14 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
-     let _ = matching_unit t in
-     (* assert VarSet.is_empty xs ?? *)
-     if VarSet.is_empty xs
-     then (TyUnit, xs)
-     else ty_err "cannot contain linear variables: fork"
+     matching_unit t;
+     (TyUnit, xs)
 
   | NewExp s ->
-     (TyProd (Lin, TySession s, TySession (dual s)),
-      VarSet.empty)
+     let t = TyProd (Lin, TySession s, TySession (dual s)) in
+     (t, VarSet.empty)
 
-  | SendExp (e1,e2) ->
+  | SendExp (e1,e2) ->          (* e2 is channel *)
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
@@ -395,10 +387,10 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | CloseExp e ->
      let t, xs = ty_exp tyenv e in
-     let () = matching_close t in
+     matching_close t;
      (TyUnit, xs)
 
   | WaitExp e ->
      let t, xs = ty_exp tyenv e in
-     let () = matching_wait t in
+     matching_wait t;
      (TyUnit, xs)
