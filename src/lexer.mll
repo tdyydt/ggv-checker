@@ -31,7 +31,7 @@ rule main = parse
 | [' ' '\009' '\012' '\n']+     { main lexbuf }
 
 (* integer literal *)
-| "-"? ['0'-'9']+
+| ['0'-'9']+
     { P.INTV (int_of_string (Lexing.lexeme lexbuf)) }
 
 | ";;" { P.SEMISEMI }
