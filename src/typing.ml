@@ -16,6 +16,80 @@ module VarSet =
 exception Typing_error of string
 let ty_err s = raise (Typing_error s)
 
+(*** Types ***)
+
+(* duality *)
+let rec dual : session -> session = function
+  | TySend (t,s) -> TyReceive (t, dual s)
+  | TyReceive (t,s) -> TySend (t, dual s)
+  | TySelect brs ->
+     TyCase (List.map (fun (l,s) -> (l, dual s)) brs)
+  | TyCase brs ->
+     TySelect (List.map (fun (l,s) -> (l, dual s)) brs)
+  | TyClose -> TyWait
+  | TyWait -> TyClose
+  | TyDC -> TyDC
+
+let mult_of_ty : ty -> mult = function
+  | TyUnit -> Un
+  | TyInt -> Un
+  | TyBool -> Un
+  | TySession _ -> Lin          (* includes TyDC *)
+  | TyFun (m, _, _) -> m
+  | TyProd (m, _, _) -> m
+  | TyDyn -> Un
+
+(* m(T) *)
+let lin ty = mult_of_ty ty = Lin
+(* let un ty = not (lin ty) *)
+let un ty = mult_of_ty ty = Un
+
+
+(* multiplicity order: [m <: n] *)
+let sub_mult m n = match m,n with
+  | Un, _ -> true
+  | Lin, Lin -> true
+  | Lin, Un -> false
+
+
+(* consistent subtyping: [t <~ u] *)
+let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
+  (* | TyBase x, TyBase y when x = y -> true *)
+  | TyUnit, TyUnit -> true
+  | TyInt, TyInt -> true
+  | TyBool, TyBool -> true
+  | TySession s, TySession r -> con_sub_session s r
+  | TyFun (m,t1,u1), TyFun (n,t2,u2) ->
+     con_sub_ty t2 t1
+     && con_sub_ty u1 u2
+     && sub_mult m n
+  | TyProd (m,t1,u1), TyProd (n,t2,u2) ->
+     con_sub_ty t1 t2
+     && con_sub_ty u1 u2
+     && sub_mult m n
+  | TyDyn, _ -> true
+  | _, TyDyn -> true
+  (* e.g.) t,u has different type constructors *)
+  | _ -> false
+
+(* [s <~ r] *)
+and con_sub_session (s : session) (r : session) : bool =
+  match s,r with
+  | TySend (t1,s1), TySend (t2,s2) ->
+     con_sub_ty t2 t1
+     && con_sub_session s1 s2
+  | TyReceive (t1,s1), TyReceive (t2,s2) ->
+     con_sub_ty t1 t2
+     && con_sub_session s1 s2
+  (* TODO: select,case が考えないといけない *)
+  | TySelect brs1, TySelect brs2 -> todo ()
+  | TyCase _, TyCase _ -> todo ()
+  | TyClose, TyClose -> true
+  | TyWait, TyWait -> true
+  | TyDC, _ -> true
+  | _, TyDC -> true
+  | _ -> false
+
 (*** Matching ***)
 
 (* matching doesn't return type itself,
