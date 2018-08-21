@@ -96,12 +96,7 @@ and con_sub_session (s : session) (r : session) : bool =
 (*** Matching ***)
 
 (* matching doesn't return type itself,
- * but arguments of the type constructor.
- * unit value () if no arguments *)
-
-let matching_unit = function
-  | TyUnit | TyDyn -> ()
-  | _ -> ty_err "matching error: unit"
+ * but arguments of the type constructor. *)
 
 let matching_fun : ty -> mult * ty * ty = function
   | TyFun (m,t,u) -> (m,t,u)
@@ -136,17 +131,6 @@ let matching_case (t : ty) (ls : label list) : (label * session) list =
   | (TySession TyDC) | TyDyn ->
      List.map (fun l -> (l, TyDC)) ls
   | _ -> ty_err "matching error: case"
-
-let matching_close = function
-  | TySession TyClose -> ()
-  | (TySession TyDC) | TyDyn -> ()
-  | _ -> ty_err "matching error: close"
-
-let matching_wait = function
-  | TySession TyWait -> ()
-  | (TySession TyDC) | TyDyn -> ()
-  | _ -> ty_err "matching error: wait"
-
 
 (*** type checking ***)
 
@@ -316,8 +300,9 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
-     matching_unit t;
-     (TyUnit, xs)
+     (* replace with con_ty? *)
+     if con_sub_ty t TyUnit then (TyUnit, xs)
+     else ty_err "T-Fork: not consistent with unit"
 
   | NewExp s ->
      let t = TyProd (Lin, TySession s, TySession (dual s)) in
@@ -387,10 +372,12 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | CloseExp e ->
      let t, xs = ty_exp tyenv e in
-     matching_close t;
-     (TyUnit, xs)
+     (* TODO: con_ty? *)
+     if con_sub_ty t (TySession TyClose) then (TyUnit, xs)
+     else ty_err "T-Close: not consistent with end!"
 
   | WaitExp e ->
      let t, xs = ty_exp tyenv e in
-     matching_wait t;
-     (TyUnit, xs)
+     (* TODO: con_ty? *)
+     if con_sub_ty t (TySession TyWait) then (TyUnit, xs)
+     else ty_err "T-Wait: not consistent with end?"
