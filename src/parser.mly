@@ -31,11 +31,11 @@ open Syntax
 %left STAR SLASH                (* mult,div *)
 
 %start toplevel
-%type <Syntax.exp> toplevel
+%type <Syntax.prog> toplevel
 %%
 
 toplevel :
-  | e=expr SEMISEMI { e }
+  | e=expr SEMISEMI { Exp e }
 
 expr :
   | e1=expr op=binop e2=expr { BinOp (op, e1, e2) }

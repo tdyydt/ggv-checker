@@ -107,3 +107,7 @@ type exp =
   | CaseExp of exp * (label * id * session * exp) list
   | CloseExp of exp
   | WaitExp of exp
+
+(* program *)
+type prog =
+  | Exp of exp

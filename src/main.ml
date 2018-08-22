@@ -1,26 +1,23 @@
 open Syntax
 open Typing
+open Printf
 
-(* not eval, but type check *)
-let rec read_eval_print tyenv =
+(* type check prog *)
+(* NOTE: tyenv is removed *)
+let rec read_check_print () =
   print_string "# ";
   flush stdout;
   let lexbuf = Lexing.from_channel stdin in
   try
-    let exp = Parser.toplevel Lexer.main lexbuf in
-    let ty, _ = ty_exp tyenv exp in
-    (* Printf.printf "" *)
-    print_string (string_of_ty ty);
-    print_newline ();
-    read_eval_print tyenv
+    let prog = Parser.toplevel Lexer.main lexbuf in
+    ty_prog prog;
+    read_check_print ()
   with
   (* parse error (Menhir),
    * lexer error,
    * or typing error etc. *)
   | Typing_error s -> print_string s;
                       print_newline ();
-                      read_eval_print tyenv
+                      read_check_print ()
 
-
-(* empty environment *)
-let _ = read_eval_print Environment.empty
+let _ = read_check_print ()

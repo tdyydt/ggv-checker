@@ -261,6 +261,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
+     (* FIXME: bug! *)
      (* e1,e2 に linear 変数が含まれている場合、
       * それらが複製されることになる *)
      if VarSet.is_empty xs && VarSet.is_empty ys
@@ -381,3 +382,10 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      (* TODO: con_ty? *)
      if con_sub_ty t (TySession TyWait) then (TyUnit, xs)
      else ty_err "T-Wait: not consistent with end?"
+
+
+let ty_prog : prog -> unit = function
+  | Exp e -> let t, xs = ty_exp Environment.empty e in
+             if un t && VarSet.is_empty xs then
+               print_string "The program is Well-typed.\n"
+             else ty_err "T-Exp: ill-typed program"
