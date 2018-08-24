@@ -112,12 +112,63 @@ and con_sub_session (s : session) (r : session) : bool =
            con_sub_session s r)
          labels1             (* I *)
      else false
-
   | TyClose, TyClose -> true
   | TyWait, TyWait -> true
   | TyDC, _ -> true
   | _, TyDC -> true
   | _ -> false
+
+(* consistency: [t ~ u] *)
+let rec con_ty (t : ty) (u : ty) : bool = match t,u with
+  | TyUnit, TyUnit -> true
+  | TyInt, TyInt -> true
+  | TyBool, TyBool -> true
+  | TySession s, TySession r -> con_session s r
+  | TyFun (m,t1,u1), TyFun (n,t2,u2) when m = n ->
+     con_ty t2 t1 && con_ty u1 u2
+  | TyProd (m,t1,u1), TyProd (n,t2,u2) when m = n ->
+     con_ty t1 t2 && con_ty u1 u2
+  | TyDyn, _ -> true
+  | _, TyDyn -> true
+  | _ -> false               (* t,u has different type constructors *)
+
+(* [s ~ r] *)
+and con_session (s : session) (r : session) : bool =
+  match s,r with
+  | TySend (t1,s1), TySend (t2,s2) ->
+     con_ty t2 t1 && con_session s1 s2
+  | TyReceive (t1,s1), TyReceive (t2,s2) ->
+     con_ty t1 t2 && con_session s1 s2
+
+  | TySelect choices1, TySelect choices2 ->
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     if LabelSet.equal labels1 labels2 then
+       (* all pairs are in consistency *)
+       List.for_all (fun l ->
+           (* assoc will not fail *)
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           con_session s r)
+         (LabelSet.elements labels1) (* I = J *)
+     else false
+  | TyCase choices1, TyCase choices2 ->
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     if LabelSet.equal labels1 labels2 then
+       List.for_all (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           con_session s r)
+         (LabelSet.elements labels1) (* I = J *)
+     else false
+  | TyClose, TyClose -> true
+  | TyWait, TyWait -> true
+  | TyDC, _ -> true
+  | _, TyDC -> true
+  | _ -> false
+
+(*** join/meet ***)
 
 let join_mult (m : mult) (n : mult) :mult = match m,n with
   | Un, Un -> Un
@@ -436,8 +487,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
-     (* TODO: replace with con_ty? *)
-     if con_sub_ty t TyUnit then (TyUnit, xs)
+     if con_ty t TyUnit then (TyUnit, xs)
      else ty_err "T-Fork: Not consistent with unit"
 
   | NewExp s ->
@@ -501,19 +551,17 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | CloseExp e ->
      let t, xs = ty_exp tyenv e in
-     (* TODO: con_ty? *)
-     if con_sub_ty t (TySession TyClose) then (TyUnit, xs)
+     if con_ty t (TySession TyClose) then (TyUnit, xs)
      else ty_err "T-Close: not consistent with end! (close)"
 
   | WaitExp e ->
      let t, xs = ty_exp tyenv e in
-     (* TODO: con_ty? *)
-     if con_sub_ty t (TySession TyWait) then (TyUnit, xs)
+     if con_ty t (TySession TyWait) then (TyUnit, xs)
      else ty_err "T-Wait: not consistent with end? (wait)"
 
 
 let ty_prog : prog -> unit = function
   | Exp e -> let t, xs = ty_exp Environment.empty e in
              if un t && VarSet.is_empty xs then
-               print_string "The program is Well-typed.\n"
+               print_string "The program is well-typed.\n"
              else ty_err "T-Exp: ill-typed program"
