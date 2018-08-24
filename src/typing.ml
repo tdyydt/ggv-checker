@@ -12,6 +12,15 @@ module VarSet =
       end
     )
 
+(* choice labels *)
+module LabelSet =
+  Set.Make(
+      struct
+        type t = label
+        let compare (x : label) y = compare x y
+      end
+    )
+
 exception Typing_error of string
 let ty_err s = raise (Typing_error s)
 
@@ -21,10 +30,10 @@ let ty_err s = raise (Typing_error s)
 let rec dual : session -> session = function
   | TySend (t,s) -> TyReceive (t, dual s)
   | TyReceive (t,s) -> TySend (t, dual s)
-  | TySelect brs ->
-     TyCase (List.map (fun (l,s) -> (l, dual s)) brs)
-  | TyCase brs ->
-     TySelect (List.map (fun (l,s) -> (l, dual s)) brs)
+  | TySelect choices ->
+     TyCase (List.map (fun (l,s) -> (l, dual s)) choices)
+  | TyCase choices ->
+     TySelect (List.map (fun (l,s) -> (l, dual s)) choices)
   | TyClose -> TyWait
   | TyWait -> TyClose
   | TyDC -> TyDC
@@ -75,8 +84,7 @@ let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
      && sub_mult m n
   | TyDyn, _ -> true
   | _, TyDyn -> true
-  (* e.g.) t,u has different type constructors *)
-  | _ -> false
+  | _ -> false               (* t,u has different type constructors *)
 
 (* [s <~ r] *)
 and con_sub_session (s : session) (r : session) : bool =
@@ -87,9 +95,30 @@ and con_sub_session (s : session) (r : session) : bool =
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
      con_sub_ty t1 t2
      && con_sub_session s1 s2
-  (* TODO: select,case が考えないといけない *)
-  | TySelect brs1, TySelect brs2 -> todo ()
-  | TyCase _, TyCase _ -> todo ()
+  | TySelect choices1, TySelect choices2 ->
+     let labels1 = List.map (fun (l,_) -> l) choices1 in (* fst *)
+     let labels2 = List.map (fun (l,_) -> l) choices2 in
+     if LabelSet.subset (LabelSet.of_list labels2)
+          (LabelSet.of_list labels1) then
+       List.for_all (fun l ->
+           (* assoc will not fail *)
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           con_sub_session s r)
+         labels2             (* J *)
+     else false
+  | TyCase choices1, TyCase choices2 ->
+     let labels1 = List.map fst choices1 in
+     let labels2 = List.map fst choices2 in
+     if LabelSet.subset (LabelSet.of_list labels1)
+          (LabelSet.of_list labels2) then
+       List.for_all (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           con_sub_session s r)
+         labels1             (* I *)
+     else false
+
   | TyClose, TyClose -> true
   | TyWait, TyWait -> true
   | TyDC, _ -> true
