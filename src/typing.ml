@@ -216,7 +216,11 @@ and meet_session (s : session) (r : session) : session = match s,r with
   | s, TyDC -> s
   | _ -> ty_err "meet_session: undefined"
 
-let rec bigjoin (tys: ty list) : ty = todo ()
+let rec bigjoin (tys: ty list) : ty =
+  (* TyDyn may work? and it is better than hd *)
+  List.fold_left (fun t_acc t ->
+      join_ty t_acc t)
+    (List.hd tys) tys
 
 
 (*** Matching ***)
