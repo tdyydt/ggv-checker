@@ -209,23 +209,27 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
        else ty_err "T-BinOp-R"
      else ty_err "T-BinOp-L"
 
-  | FunExp (Lin,x,t,e) ->
-     (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (Environment.mem x tyenv));
-
-     let u, ys = ty_exp (Environment.add x t tyenv) e in
-     (TyFun (Lin,t,u), VarSet.remove x ys)
-
-  | FunExp (Un,x,t,e) ->
-     (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (Environment.mem x tyenv));
-
-     (* un 関数を作るため、
-      * e に lin 変数が含まれていないこと *)
-     let u, ys = ty_exp (Environment.add x t tyenv) e in
-     if VarSet.is_empty ys
-     then (TyFun (Un,t,u), VarSet.remove x ys)
-     else ty_err "unrestricted functions cannot contain variables of a linear type"
+  | FunExp (m,x,t1,e1) ->
+     assert (not (Environment.mem x tyenv)); (* tmp *)
+     let t2, ys = ty_exp (Environment.add x t1 tyenv) e1 in
+     if lin t1 && m = Un then
+       (* Y = {x} *)
+       if VarSet.equal ys (VarSet.singleton x) then
+         (TyFun (Un, t1, t2), VarSet.empty)
+           (* NOTE: un関数にlin変数が含まれるエラーの可能性 *)
+       else ty_err ("T-Fun: unused linear variable: " ^ x)
+     else if lin t1 && m = Lin then
+       if VarSet.mem x ys then
+         (TyFun (Lin, t1, t2), VarSet.remove x ys)
+       else ty_err ("T-Fun: unused linear variable: " ^ x)
+     else if un t1 && m = Un then
+       (* Y = {} *)
+       if VarSet.is_empty ys then
+         (TyFun (Un, t1, t2), VarSet.empty)
+       else ty_err "T-Fun: Unresterected function contains linear variables"
+                   (* "unrestricted functions cannot contain variables of a linear type" *)
+     else                       (* un t1 && m = Lin *)
+       (TyFun (Lin, t1, t2), ys)
 
   | AppExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
