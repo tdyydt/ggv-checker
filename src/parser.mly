@@ -75,6 +75,7 @@ para :
 (* case branch *)
 branch:
   (* TODO: PERIOD to RARROW ? *)
+  (* l(x:S).e *)
   | l=ID LPAREN x=ID COLON s=session RPAREN PERIOD e=expr
     { (l,x,s,e) }
   (* add type annotation S *)
