@@ -10,7 +10,7 @@ open Syntax
 %token BANG QU AMP DC
 %token END PERIOD COMMA
 %token PLUS MINUS STAR SLASH
-(* %token LT *)
+%token LT GT LE GE
 %token TRUE FALSE
 %token LET IN EQ
 %token FUN RARROW COLON
@@ -25,7 +25,7 @@ open Syntax
 (* via: https://caml.inria.fr/pub/docs/manual-ocaml/expr.html *)
 %right prec_let prec_fun
 (* %right prec_if *)
-(* %left LT GT EQ LE GE *)
+%left LT GT EQ LE GE
 %left PLUS MINUS
 %right RARROW                   (* function ty *)
 %left STAR SLASH                (* mult,div *)
@@ -71,6 +71,11 @@ para :
   | MINUS { Minus }
   | STAR { Mult }
   | SLASH { Div }
+  | LT { Lt }                   (* relational *)
+  | GT { Gt }
+  | EQ { Eq }
+  | LE { LE }
+  | GE { GE }
 
 (* case branch *)
 branch:

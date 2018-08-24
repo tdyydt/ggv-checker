@@ -79,7 +79,7 @@ and string_of_session = function
  * It is possible to use two constructors: for each lin and un
  * but I want to infer m in the future. *)
 
-type binOp = Plus | Minus | Mult | Div (* | LT | Eq *)
+type binOp = Plus | Minus | Mult | Div | Lt | Gt | Eq | LE | GE
 
 (* TODO: postfix Exp? *)
 type exp =

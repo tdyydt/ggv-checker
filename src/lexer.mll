@@ -59,8 +59,10 @@ rule main = parse
 | "/" { P.SLASH }
 
 | "=" { P.EQ }
-(* | "<" { P.LT } *)
-(* | ">" { P.GT } *)
+| "<" { P.LT }
+| ">" { P.GT }
+| "<=" { P.LE }
+| ">=" { P.GE }
 
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '\'']*
     { let id = Lexing.lexeme lexbuf in

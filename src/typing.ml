@@ -365,6 +365,7 @@ let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
 (* type of binOp *)
 let ty_binop : binOp -> ty * ty * ty = function
   | Plus | Minus | Mult | Div -> (TyInt, TyInt, TyInt)
+  | (Lt | Gt | Eq | LE | GE) -> (TyInt, TyInt, TyBool)
 
 (* returns the set of free linear variables used in typing *)
 let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
