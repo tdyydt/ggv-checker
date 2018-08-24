@@ -52,26 +52,26 @@ let rec string_of_ty = function
   | TyProd (m,t,u) ->
      sprintf "(%s *%s %s)"
        (string_of_ty t) (string_of_mult m) (string_of_ty u)
-  | TyDyn -> "*"
+  | TyDyn -> "Dyn"
 
 and string_of_session = function
   | TySend (t,s) ->
      sprintf "(!%s.%s)" (string_of_ty t) (string_of_session s)
   | TyReceive (t,s) ->
      sprintf "(?%s.%s)" (string_of_ty t) (string_of_session s)
-  | TySelect brs ->
+  | TySelect choices ->
      sprintf "+{%s}"
        (String.concat ", "
           (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s)
-             brs))
-  | TyCase brs ->
+             choices))
+  | TyCase choices ->
      sprintf "&{%s}"
        (String.concat ", "
           (List.map (fun (l,s) -> l ^ ":" ^ string_of_session s)
-             brs))
+             choices))
   | TyClose -> "end!"
   | TyWait -> "end?"
-  | TyDC -> "#"
+  | TyDC -> "DC"
 
 (*** Programs ***)
 
@@ -109,5 +109,4 @@ type exp =
   | WaitExp of exp
 
 (* program *)
-type prog =
-  | Exp of exp
+type prog = Exp of exp
