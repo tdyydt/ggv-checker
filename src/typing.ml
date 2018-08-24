@@ -1,7 +1,6 @@
 open Syntax
 
-module E = Environment
-type tyenv = ty E.t
+type tyenv = ty Environment.t
 
 (* set of variable *)
 (* OR: IdSet, Variables *)
@@ -189,7 +188,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   match e with
   | Var x -> begin
       try
-        let t = E.find x tyenv in
+        let t = Environment.find x tyenv in
         if lin t then (t, VarSet.singleton x)
         else (t, VarSet.empty)
       with
@@ -212,18 +211,18 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | FunExp (Lin,x,t,e) ->
      (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (E.mem x tyenv));
+     assert (not (Environment.mem x tyenv));
 
-     let u, ys = ty_exp (E.add x t tyenv) e in
+     let u, ys = ty_exp (Environment.add x t tyenv) e in
      (TyFun (Lin,t,u), VarSet.remove x ys)
 
   | FunExp (Un,x,t,e) ->
      (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (E.mem x tyenv));
+     assert (not (Environment.mem x tyenv));
 
      (* un 関数を作るため、
       * e に lin 変数が含まれていないこと *)
-     let u, ys = ty_exp (E.add x t tyenv) e in
+     let u, ys = ty_exp (Environment.add x t tyenv) e in
      if VarSet.is_empty ys
      then (TyFun (Un,t,u), VarSet.remove x ys)
      else ty_err "unrestricted functions cannot contain variables of a linear type"
@@ -239,10 +238,10 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | LetExp (x,e,f) ->
      (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (E.mem x tyenv));
+     assert (not (Environment.mem x tyenv));
 
      let t, xs = ty_exp tyenv e in
-     let u, ys = ty_exp (E.add x t tyenv) f in
+     let u, ys = ty_exp (Environment.add x t tyenv) f in
      (* lin(t) の場合、 ys の中に x が入っているべき *)
      if lin t && not (VarSet.mem x ys)
                      (* x が linear なのに使われない *)
@@ -281,12 +280,12 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
       * remove の辺りが不十分か *)
      (* ===> *)
      (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (E.mem x1 tyenv));
-     assert (not (E.mem x2 tyenv));
+     assert (not (Environment.mem x1 tyenv));
+     assert (not (Environment.mem x2 tyenv));
 
      let t, ys = ty_exp tyenv e in
      let _, t1, t2 = matching_prod t in
-     let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
+     let u, zs = ty_exp (Environment.add x1 t1 (Environment.add x2 t2 tyenv)) f in
 
      (* x1,x2 のうち linear なものは、全て使われていないとダメ *)
      if lin t1 && not (VarSet.mem x1 zs)
@@ -352,7 +351,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
          let _ =
            List.map (fun (l,x,_,f) ->
                let s = List.assoc l ty_brs in
-               let u, ys = ty_exp (E.add x (TySession s) tyenv) f in
+               let u, ys = ty_exp (Environment.add x (TySession s) tyenv) f in
 
                (* TODO: x は linear変数なので、使われないといけない *)
 
