@@ -153,7 +153,30 @@ and join_session (s : session) (r : session) : session = match s,r with
      TySend (meet_ty t1 t2, join_session s1 s2)
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
      TyReceive (join_ty t1 t2, join_session s1 s2)
-  | TySelect choices1, TySelect choices2 -> todo ()
+  | TySelect choices1, TySelect choices2 ->
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     (* I - J *)
+     let labels3 = LabelSet.diff labels1 labels2 in
+     let new_choices1 =
+       List.map (fun l -> (l, List.assoc l choices1))
+         (LabelSet.elements labels3) in
+     (* I /\ J *)
+     let labels4 = LabelSet.inter labels1 labels2 in
+     let new_choices2 =         (* empty is ok *)
+       List.map (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           (l, join_session s r))
+         (LabelSet.elements labels4) in
+     (* J - I *)
+     let labels5 = LabelSet.diff labels2 labels1 in
+     let new_choices3 =
+       List.map (fun l -> (l, List.assoc l choices2))
+         (LabelSet.elements labels5) in
+     (* Merge three choice lists; cannot be empty *)
+     TySelect (new_choices1 @ new_choices2 @ new_choices3)
+
   | TyCase choices1, TyCase choices2 ->
      let labels1 = List.map fst choices1 in
      let labels2 = List.map fst choices2 in
@@ -169,6 +192,7 @@ and join_session (s : session) (r : session) : session = match s,r with
                    let r = List.assoc l choices2 in
                    (l, join_session s r))
                  (LabelSet.elements labels3))
+
   | TyClose, TyClose -> TyClose
   | TyWait, TyWait -> TyWait
   | TyDC, s -> s
@@ -209,7 +233,30 @@ and meet_session (s : session) (r : session) : session = match s,r with
                      (l, meet_session s r))
                    (LabelSet.elements labels3))
 
-  | TyCase choices1, TyCase choices2 -> todo ()
+  | TyCase choices1, TyCase choices2 ->
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     (* I - J *)
+     let labels3 = LabelSet.diff labels1 labels2 in
+     let new_choices1 =
+       List.map (fun l -> (l, List.assoc l choices1))
+         (LabelSet.elements labels3) in
+     (* I /\ J *)
+     let labels4 = LabelSet.inter labels1 labels2 in
+     let new_choices2 =         (* empty is ok *)
+       List.map (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           (l, meet_session s r))
+         (LabelSet.elements labels4) in
+     (* J - I *)
+     let labels5 = LabelSet.diff labels2 labels1 in
+     let new_choices3 =
+       List.map (fun l -> (l, List.assoc l choices2))
+         (LabelSet.elements labels5) in
+     (* Merge three choice lists; cannot be empty *)
+     TyCase (new_choices1 @ new_choices2 @ new_choices3)
+
   | TyClose, TyClose -> TyClose
   | TyWait, TyWait -> TyWait
   | TyDC, s -> s
