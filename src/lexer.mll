@@ -34,6 +34,7 @@ rule main = parse
 | ['0'-'9']+
     { P.INTV (int_of_string (Lexing.lexeme lexbuf)) }
 
+| "(*" { comment 0 lexbuf }     (* Entering comment mode *)
 | ";;" { P.SEMISEMI }
 
 | "(" { P.LPAREN }
@@ -68,3 +69,12 @@ rule main = parse
       with
       | _ -> Parser.ID id
      }
+
+and comment level = parse
+| "*)" {
+  if level = 0 then main lexbuf
+  else comment (level - 1) lexbuf
+  }
+| "(*" { comment (level + 1) lexbuf }
+| _ { comment level lexbuf }    (* ignore any char *)
+| eof { failwith "Comment is not closed." }
