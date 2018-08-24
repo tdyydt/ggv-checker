@@ -7,8 +7,6 @@ let reservedWords = [
     ("unit", P.UNIT);           (* types *)
     ("int", P.INT);
     ("bool", P.BOOL);
-    ("Dyn", P.DYN);
-    ("DC", P.DC);
     ("end", P.END);
     ("true", P.TRUE);           (* bool *)
     ("false", P.FALSE);
@@ -63,6 +61,9 @@ rule main = parse
 | ">" { P.GT }
 | "<=" { P.LE }
 | ">=" { P.GE }
+
+| "Dyn" { P.DYN }
+| "DC" { P.DC }
 
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_' '\'']*
     { let id = Lexing.lexeme lexbuf in
