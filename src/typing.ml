@@ -50,9 +50,13 @@ let sub_mult m n = match m,n with
   | Lin, Lin -> true
   | Lin, Un -> false
 
-(* join/meet wrt. subtyping *)
-let rec join (s : session) (t : session) : session = todo ()
-and meet (s : session) (t : session) : session = todo ()
+(* lifted join/meet (subtyping & precision) *)
+let rec join_ty (t : ty) (u : ty) : ty = todo ()
+and meet_ty (t : ty) (u : ty) : ty = todo ()
+and join_session (s : session) (r : session) : session = todo ()
+and meet_session (s : session) (r : session) : session = todo ()
+
+let rec bigjoin (tys: ty list) : ty = todo ()
 
 (* consistent subtyping: [t <~ u] *)
 let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
@@ -123,13 +127,6 @@ let matching_select (t : ty) (l : label) : (label * session) list =
   (* (+){l : TyDC } *)
   | (TySession TyDC) | TyDyn -> [(l, TyDC)]
   | _ -> ty_err "matching error: select"
-
-let matching_case (t : ty) (ls : label list) : (label * session) list =
-  match t with
-  | TySession (TyCase br) -> br
-  | (TySession TyDC) | TyDyn ->
-     List.map (fun l -> (l, TyDC)) ls
-  | _ -> ty_err "matching error: case"
 
 (*** type checking ***)
 
@@ -246,8 +243,8 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e2 in
      assert_disjoint xs ys;
-     (* if lin(t), x should be used in e2 *)
-     if lin t then
+     (* if lin(t1), x should be used in e2 *)
+     if lin t1 then
        if VarSet.mem x ys then
          (t2, VarSet.union xs (VarSet.remove x ys))
        else ty_err ("T-Let: Unused linear variable: " ^ x)
@@ -315,7 +312,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t3, s = matching_send t2 in
      if con_sub_ty t1 t3
      then (TySession s, VarSet.union xs ys)
-     else ty_err "Not consistent subtype: send"
+     else ty_err "T-Send: Not consistent subtype"
 
   | ReceiveExp e1 ->
      let t1, xs = ty_exp tyenv e1 in
@@ -336,38 +333,32 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
           ty_err ("T-Select: Label is not in choices: " ^ l)
      end
 
-  (* br=branch *)
-  | CaseExp (e, brs) ->
-     let t, xs = ty_exp tyenv e in
-     (* pick up labels *)
-     let ls = List.map (fun (l,_,_,_) -> l) brs in
-     let ty_brs = matching_case t ls in
-     begin
-       try
-         (* 式 f[i] の型 u[i],
-          * その型付けで用いた linear 変数集合 ys[i]
-          * の組たちのリスト *)
-         let _ =
-           List.map (fun (l,x,_,f) ->
-               let s = List.assoc l ty_brs in
-               let u, ys = ty_exp (Environment.add x (TySession s) tyenv) f in
-
-               (* TODO: x は linear変数なので、使われないといけない *)
-
-               (u, VarSet.remove x ys))
-             brs in
-         (* ys[i] たちは bigUnion を取る。
-          * u[i] たちは等しいはず
-          * assertEq か？ *)
-         (* => そうではなくて、
-          * 等しくなくても subtype 関係であればいいので、
-          * もっとも super な型を取る操作をやればいい *)
-         todo ()
-       with
-       (* どこかの部分式でエラーが起きた場合 *)
-       | Not_found -> ty_err "label is not in branches"
-     end
-
+  | CaseExp (e0, branches) ->
+     let t, xs = ty_exp tyenv e0 in
+     (* choices of branches *)
+     let choices = List.map (fun (l,_,s,_) -> (l,s)) branches in
+     if con_sub_ty t (TySession (TyCase choices)) then
+       let (us : ty list), (yss : VarSet.t list) =
+         List.split
+           (List.map (fun (l,x,s,e) ->
+                let u, ys = ty_exp (Environment.add x (TySession s) tyenv) e in
+                if VarSet.mem x ys then
+                  (u, VarSet.remove x ys) (* Uj,Yj *)
+                else ty_err ("T-Case: Unused linear variable: " ^ x))
+              branches)
+       in
+       (* ys' = ys1 = ys2 = ... *)
+       let ys' : VarSet.t =
+         List.fold_left (fun ys_acc ys ->
+             if VarSet.equal ys ys_acc then ys
+             else ty_err ("T-Case: Same linear variables should be used in case branches"))
+           (List.hd yss)        (* use first elem *)
+           yss
+       in
+       let u' = bigjoin us in
+       assert_disjoint xs ys';
+       (u', VarSet.union xs ys')
+     else ty_err "T-Case: Not consistent subtype"
 
   | CloseExp e ->
      let t, xs = ty_exp tyenv e in
