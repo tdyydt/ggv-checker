@@ -155,7 +155,7 @@ let lin_tyenv tyenv =
 
 let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
   let zs = VarSet.inter xs ys in
-  (* display zs? *)
+  (* display duplicate elements: zs? *)
   (* violation of linearity *)
   if VarSet.is_empty zs then ()
   else ty_err "Not disjoint sets"
@@ -183,7 +183,7 @@ let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
 let ty_binop : binOp -> ty * ty * ty = function
   | Plus | Minus | Mult | Div -> (TyInt, TyInt, TyInt)
 
-(* returns the set of linear type variables used in typing *)
+(* returns the set of free linear variables used in typing *)
 let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   match e with
   | Var x -> begin
@@ -192,7 +192,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
         if lin t then (t, VarSet.singleton x)
         else (t, VarSet.empty)
       with
-      | Not_found -> ty_err ("the variable " ^ x ^ " is not bound")
+      | Not_found -> ty_err ("T-Var: Not bound: " ^ x)
     end
   | ULit -> (TyUnit, VarSet.empty)
   | ILit _ -> (TyInt, VarSet.empty)
@@ -210,7 +210,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else ty_err "T-BinOp-L"
 
   | FunExp (m,x,t1,e1) ->
-     assert (not (Environment.mem x tyenv)); (* tmp *)
+     assert (not (Environment.mem x tyenv)); (* FIXME *)
 
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e1 in
      if lin t1 && m = Un then
@@ -219,11 +219,11 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
          if VarSet.is_empty (VarSet.remove x ys) then
            (TyFun (Un, t1, t2), VarSet.empty)
          else ty_err "T-Fun: Unresterected function contains linear variables"
-       else ty_err ("T-Fun: unused linear variable: " ^ x)
+       else ty_err ("T-Fun: Unused linear variable: " ^ x)
      else if lin t1 && m = Lin then
        if VarSet.mem x ys then
          (TyFun (Lin, t1, t2), VarSet.remove x ys)
-       else ty_err ("T-Fun: unused linear variable: " ^ x)
+       else ty_err ("T-Fun: Unused linear variable: " ^ x)
      else if un t1 && m = Un then
        (* Y = {} *)
        if VarSet.is_empty ys then
@@ -236,72 +236,67 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
-     let m, t11, t12 = matching_fun t1 in
-     if con_sub_ty t2 t11
-     then (t12, VarSet.union xs ys)
-     else ty_err "not consistent subtype: app"
+     let _, t11, t12 = matching_fun t1 in
+     if con_sub_ty t2 t11 then (t12, VarSet.union xs ys)
+     else ty_err "T-App: Not consistent subtype"
 
-  | LetExp (x,e,f) ->
-     (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (Environment.mem x tyenv));
+  | LetExp (x,e1,e2) ->
+     assert (not (Environment.mem x tyenv)); (* FIXME *)
 
-     let t, xs = ty_exp tyenv e in
-     let u, ys = ty_exp (Environment.add x t tyenv) f in
-     (* lin(t) の場合、 ys の中に x が入っているべき *)
-     if lin t && not (VarSet.mem x ys)
-                     (* x が linear なのに使われない *)
-     then ty_err ("linear variable is not used: " ^ x)
-     else (u, VarSet.remove x ys)
+     let t1, xs = ty_exp tyenv e1 in
+     let t2, ys = ty_exp (Environment.add x t1 tyenv) e2 in
+     assert_disjoint xs ys;
+     (* if lin(t), x should be used in e2 *)
+     if lin t then
+       if VarSet.mem x ys then
+         (t2, VarSet.union xs (VarSet.remove x ys))
+       else ty_err ("T-Let: Unused linear variable: " ^ x)
+     else (t2, VarSet.union xs ys) (* un(t) *)
 
-  | PairCons (Lin,e1,e2) ->
+  | PairCons (m,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
-     assert_disjoint xs ys;
-     (TyProd (Lin,t1,t2), VarSet.union xs ys)
+     assert_disjoint xs ys;     (* タイミングが変？ *)
+     if m = Un then
+       (* NOTE: xs, ys need not be empty *)
+       if lin t1 && lin t2 then
+         (TyProd (Un,t1,t2), VarSet.union xs ys)
+       else ty_err "T-PairCons: Linear element in unrestrected pair"
+     else (TyProd (Lin,t1,t2), VarSet.union xs ys)
 
-  (* m = Un であったら、
-   * xs,ysは空でないといけない。*)
-  | PairCons (Un,e1,e2) ->
-     let t1, xs = ty_exp tyenv e1 in
-     let t2, ys = ty_exp tyenv e2 in
-     assert_disjoint xs ys;
-     (* FIXME: bug! *)
-     (* e1,e2 に linear 変数が含まれている場合、
-      * それらが複製されることになる *)
-     if VarSet.is_empty xs && VarSet.is_empty ys
-     then (TyProd (Un,t1,t2), VarSet.union xs ys)
-     else ty_err "unrestricted pairs cannot contain linear varialbes"
-
-  (* | PairDest (x1,t1,x2,t2,e,f) ->
-   *    let t, ys = ty_exp tyenv e in
-   *    (\* extend (x,t1) (y,t2) in tyenv *\)
-   *    let u, zs = ty_exp (E.add x1 t1 (E.add x2 t2 tyenv)) f in
-   *    let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
-   *    assert_disjoint ys zs';
-   *    (u, VarSet.union ys zs') *)
-
-  | PairDest (x1,x2,e,f) ->
-     (* TODO: x1,x2 が既に定義されてる変数で、上書きの場合
-      * remove の辺りが不十分か *)
-     (* ===> *)
+  | PairDest (x1,x2,e1,e2) ->
      (* 変数名の上書きを(一時的に)禁止 *)
      assert (not (Environment.mem x1 tyenv));
      assert (not (Environment.mem x2 tyenv));
 
-     let t, ys = ty_exp tyenv e in
+     let t, ys = ty_exp tyenv e1 in
      let _, t1, t2 = matching_prod t in
-     let u, zs = ty_exp (Environment.add x1 t1 (Environment.add x2 t2 tyenv)) f in
-
-     (* x1,x2 のうち linear なものは、全て使われていないとダメ *)
-     if lin t1 && not (VarSet.mem x1 zs)
-     then ty_err ("linear variable is not used: " ^ x1)
-     else if lin t2 && not (VarSet.mem x2 zs)
-     then ty_err ("linear variable is not used: " ^ x2)
-     else
-       (* remove x1, x2 *)
-       let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
-       assert_disjoint ys zs';
-       (u, VarSet.union ys zs')
+     let u, zs = ty_exp (Environment.add x1 t1
+                           (Environment.add x2 t2 tyenv)) e2
+     in
+     (* TODO: assert_disjoint here? *)
+     if lin t1 && lin t2 then
+       if VarSet.mem x1 zs then
+         if VarSet.mem x2 zs then
+           let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+           assert_disjoint ys zs';
+           (u, VarSet.union ys zs')
+         else ty_err ("T-PairDest: Unused linear variable: " ^ x2)
+       else ty_err ("T-PairDest: Unused linear variable: " ^ x1)
+     else if lin t1 && un t2 then
+       if VarSet.mem x1 zs then
+         let zs' = VarSet.remove x1 zs in
+         assert_disjoint ys zs';
+         (u, VarSet.union ys zs')
+       else ty_err ("T-PairDest: Unused linear variable: " ^ x1)
+     else if un t1 && lin t2 then
+       if VarSet.mem x2 zs then
+         let zs' = VarSet.remove x2 zs in
+         assert_disjoint ys zs';
+         (u, VarSet.union ys zs')
+       else ty_err ("T-PairDest: Unused linear variable: " ^ x2)
+     else let _ = assert_disjoint ys zs in
+          (u, VarSet.union ys zs)
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
