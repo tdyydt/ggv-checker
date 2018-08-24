@@ -4,11 +4,13 @@ module P = Parser
 let reservedWords = [
     ("lin", P.LIN);
     ("un", P.UN);
-    ("unit", P.UNIT);
+    ("unit", P.UNIT);           (* types *)
     ("int", P.INT);
     ("bool", P.BOOL);
+    ("Dyn", P.DYN);
+    ("DC", P.DC);
     ("end", P.END);
-    ("true", P.TRUE);
+    ("true", P.TRUE);           (* bool *)
     ("false", P.FALSE);
     ("fun", P.FUN);
     ("let", P.LET);
@@ -55,7 +57,6 @@ rule main = parse
 | "-" { P.MINUS }
 | "*" { P.STAR }
 | "/" { P.SLASH }
-| "#" { P.HASH }
 
 | "=" { P.EQ }
 (* | "<" { P.LT } *)

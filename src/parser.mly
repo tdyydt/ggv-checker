@@ -6,8 +6,8 @@ open Syntax
 %token LPAREN RPAREN
 %token LBRACE RBRACE
 %token LIN UN
-%token UNIT INT BOOL
-%token BANG QU AMP HASH
+%token UNIT INT BOOL DYN
+%token BANG QU AMP DC
 %token END PERIOD COMMA
 %token PLUS MINUS STAR SLASH
 (* %token LT *)
@@ -110,7 +110,7 @@ simple_ty :
   | UNIT { TyUnit }
   | INT { TyInt }
   | BOOL { TyBool }
-  | STAR { TyDyn }
+  | DYN { TyDyn }
   | LPAREN t=ty RPAREN { t }
 
 session :
@@ -129,7 +129,7 @@ branch_ty :
 simple_session :
   | END BANG { TyClose }
   | END QU { TyWait }
-  | HASH { TyDC }
+  | DC { TyDC }
   | LPAREN s=session RPAREN { s }
 
 (* Multiplicity *)
