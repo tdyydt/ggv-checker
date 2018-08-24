@@ -211,12 +211,14 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | FunExp (m,x,t1,e1) ->
      assert (not (Environment.mem x tyenv)); (* tmp *)
+
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e1 in
      if lin t1 && m = Un then
        (* Y = {x} *)
-       if VarSet.equal ys (VarSet.singleton x) then
-         (TyFun (Un, t1, t2), VarSet.empty)
-           (* NOTE: un関数にlin変数が含まれるエラーの可能性 *)
+       if VarSet.mem x ys then
+         if VarSet.is_empty (VarSet.remove x ys) then
+           (TyFun (Un, t1, t2), VarSet.empty)
+         else ty_err "T-Fun: Unresterected function contains linear variables"
        else ty_err ("T-Fun: unused linear variable: " ^ x)
      else if lin t1 && m = Lin then
        if VarSet.mem x ys then
@@ -227,9 +229,8 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
        if VarSet.is_empty ys then
          (TyFun (Un, t1, t2), VarSet.empty)
        else ty_err "T-Fun: Unresterected function contains linear variables"
-                   (* "unrestricted functions cannot contain variables of a linear type" *)
-     else                       (* un t1 && m = Lin *)
-       (TyFun (Lin, t1, t2), ys)
+            (* "unrestricted functions cannot contain variables of a linear type" *)
+     else (TyFun (Lin, t1, t2), ys) (* un t1 && m = Lin *)
 
   | AppExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
