@@ -159,26 +159,6 @@ let matching_select (t : ty) (l : label) : (label * session) list =
 
 (*** type checking ***)
 
-(* TODO: better name ?? *)
-(* let mult_tyenv m tyenv =
- *   (\* tyenv から tys だけ取り出す。 *\)
- *   let tys = todo () in
- *   List.for_all (fun t -> mult_of_ty t = m) tys *)
-
-(*
-(* Env を参照する、どこで定義すべきか？？ *)
-(* check if m(tyenv) holds *)
-let un_tyenv tyenv =
-  (* tyenv から tys だけ取り出す。 *)
-  let tys = Environment.values tyenv in
-  List.for_all un tys
-
-(* unだけで、linは使わない？ *)
-let lin_tyenv tyenv =
-  let tys = Environment.values tyenv in
-  List.for_all lin tys
-*)
-
 let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
   let zs = VarSet.inter xs ys in
   (* display duplicate elements: zs? *)
@@ -189,21 +169,6 @@ let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
 (* VarSet.t -> VarSet.t -> bool *)
 (* let is_disjoint xs ys =
  *   VarSet.is_empty (VarSet.inter xs ys) *)
-
-
-(* TODO:
- * linear な変数が使われずに、捨てられることをどこで咎める？？
- * un_tyenv tyenv にあたるもの。
- * un_tyenv は要らない？
- * Gamma から lin vars だけ取り出す処理が必要か？？
- *
- * Gamma はずっと連れ回されて、
- * 最後の 式e がプロセスになる時点で
- * lin_vars(tyenv) = eで使われるlv集合
- *
- * process typing のところでの判定になる？
- * この判定がどこにも見えない。
- * *)
 
 (* type of binOp *)
 let ty_binop : binOp -> ty * ty * ty = function
@@ -282,7 +247,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
   | PairCons (m,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in
-     assert_disjoint xs ys;     (* タイミングが変？ *)
+     assert_disjoint xs ys;     (* Can I put this here? maybe below? *)
      if m = Un then
        (* NOTE: xs, ys need not be empty *)
        if lin t1 && lin t2 then
