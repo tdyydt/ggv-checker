@@ -89,28 +89,26 @@ and con_sub_session (s : session) (r : session) : bool =
      con_sub_ty t1 t2
      && con_sub_session s1 s2
   | TySelect choices1, TySelect choices2 ->
-     let labels1 = List.map (fun (l,_) -> l) choices1 in (* fst *)
-     let labels2 = List.map (fun (l,_) -> l) choices2 in
-     if LabelSet.subset (LabelSet.of_list labels2)
-          (LabelSet.of_list labels1) then
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     if LabelSet.subset labels2 labels1 then
        (* all elements are in consistent subtyping *)
        List.for_all (fun l ->
            (* assoc will not fail *)
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
            con_sub_session s r)
-         labels2             (* J *)
+         (LabelSet.elements labels2) (* J *)
      else false
   | TyCase choices1, TyCase choices2 ->
-     let labels1 = List.map fst choices1 in
-     let labels2 = List.map fst choices2 in
-     if LabelSet.subset (LabelSet.of_list labels1)
-          (LabelSet.of_list labels2) then
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     if LabelSet.subset labels1 labels2 then
        List.for_all (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
            con_sub_session s r)
-         labels1             (* I *)
+         (LabelSet.elements labels1) (* I *)
      else false
   | TyClose, TyClose -> true
   | TyWait, TyWait -> true
@@ -229,11 +227,10 @@ and join_session (s : session) (r : session) : session = match s,r with
      TySelect (new_choices1 @ new_choices2 @ new_choices3)
 
   | TyCase choices1, TyCase choices2 ->
-     let labels1 = List.map fst choices1 in
-     let labels2 = List.map fst choices2 in
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
      (* intersection of lists *)
-     let labels3 = LabelSet.inter (LabelSet.of_list labels1)
-                     (LabelSet.of_list labels2) in
+     let labels3 = LabelSet.inter labels1 labels2 in
      (* choice set cannot be empty in TyCase *)
      if LabelSet.is_empty labels3 then
        ty_err "join_session: undefined"
@@ -271,10 +268,9 @@ and meet_session (s : session) (r : session) : session = match s,r with
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
      TyReceive (meet_ty t1 t2, meet_session s1 s2)
   | TySelect choices1, TySelect choices2 ->
-     let labels1 = List.map fst choices1 in
-     let labels2 = List.map fst choices2 in
-     let labels3 = LabelSet.inter (LabelSet.of_list labels1)
-                     (LabelSet.of_list labels2) in
+     let labels1 = LabelSet.of_list (List.map fst choices1) in
+     let labels2 = LabelSet.of_list (List.map fst choices2) in
+     let labels3 = LabelSet.inter labels1 labels2 in
      if LabelSet.is_empty labels3 then
        ty_err "meet_session: undefined"
      else
