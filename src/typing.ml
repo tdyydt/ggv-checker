@@ -300,9 +300,9 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
-     (* replace with con_ty? *)
+     (* TODO: replace with con_ty? *)
      if con_sub_ty t TyUnit then (TyUnit, xs)
-     else ty_err "T-Fork: not consistent with unit"
+     else ty_err "T-Fork: Not consistent with unit"
 
   | NewExp s ->
      let t = TyProd (Lin, TySession s, TySession (dual s)) in
@@ -317,24 +317,23 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      then (TySession s, VarSet.union xs ys)
      else ty_err "Not consistent subtype: send"
 
-  | ReceiveExp e ->
-     let t1, xs = ty_exp tyenv e in
+  | ReceiveExp e1 ->
+     let t1, xs = ty_exp tyenv e1 in
      let t2, s = matching_receive t1 in
      (TyProd (Lin, t2, TySession s), xs)
 
   | SelectExp (l,e) ->
      let t, xs = ty_exp tyenv e in
-     let br = matching_select t l in
+     let choices = matching_select t l in
      begin
        try
-       (* check if label l is in branches *)
-       (* l が入っているか？ *)
-       (* この検査まで matching_select でできるが、
-        * 規則に合わせると、そうしない方が自然か *)
-         let s = List.assoc l br in (TySession s, xs)
+         (* Check if l is in choices *)
+         (* NOTE: This check can be done within matching_select *)
+         let s = List.assoc l choices in
+         (TySession s, xs)
        with
-       (* l が入っていないということ *)
-       | Not_found -> ty_err "label is not in branches"
+       | Not_found ->
+          ty_err ("T-Select: Label is not in choices: " ^ l)
      end
 
   (* br=branch *)
@@ -374,13 +373,13 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t, xs = ty_exp tyenv e in
      (* TODO: con_ty? *)
      if con_sub_ty t (TySession TyClose) then (TyUnit, xs)
-     else ty_err "T-Close: not consistent with end!"
+     else ty_err "T-Close: not consistent with end! (close)"
 
   | WaitExp e ->
      let t, xs = ty_exp tyenv e in
      (* TODO: con_ty? *)
      if con_sub_ty t (TySession TyWait) then (TyUnit, xs)
-     else ty_err "T-Wait: not consistent with end?"
+     else ty_err "T-Wait: not consistent with end? (wait)"
 
 
 let ty_prog : prog -> unit = function
