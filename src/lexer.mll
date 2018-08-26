@@ -16,7 +16,7 @@ let reservedWords = [
     ("fun", P.FUN);
     ("let", P.LET);
     ("in", P.IN);
-    ("rec", P.REC);
+    ("fix", P.FIX);
     ("fork", P.FORK);           (* communication *)
     ("new", P.NEW);
     ("send", P.SEND);

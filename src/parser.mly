@@ -12,7 +12,7 @@ open Syntax
 %token PLUS MINUS STAR SLASH
 %token LT GT LE GE
 %token TRUE FALSE IF THEN ELSE
-%token LET IN EQ REC
+%token LET IN EQ FIX
 %token FUN RARROW COLON
 %token FORK NEW SEND RECEIVE
 %token SELECT CLOSE WAIT
@@ -47,8 +47,8 @@ expr :
   | LET x=ID EQ e1=expr IN e2=expr %prec prec_let
     { LetExp (x,e1,e2) }
   (* TODO: improve syntax, but I should put m somewhere *)
-  (* let rec x = fun m (y:t1) : t2 -> e1 in e2 *)
-  | LET REC x=ID EQ FUN m=mult p=para COLON t2=ty RARROW e1=expr
+  (* let x = fix m (y:t1) : t2 -> e1 in e2 *)
+  | LET x=ID EQ FIX m=mult p=para COLON t2=simple_ty RARROW e1=expr
     IN e2=expr %prec prec_let
     { let (y,t1) = p in
       (* LetRecExp (x,y,t1,t2,e1,e2) *)
