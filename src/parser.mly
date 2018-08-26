@@ -74,8 +74,7 @@ expr :
 
 (* parameter; (x:t) or (x:s) *)
 para :
-  | LPAREN x=ID COLON t=ty RPAREN { (x,t) }
-  | LPAREN x=ID COLON s=session RPAREN { (x, TySession s) }
+  | LPAREN x=ID COLON t=ty_or_session RPAREN { (x,t) }
 
 %inline binop :
   | PLUS { Plus }               (* arith *)
@@ -116,11 +115,15 @@ simple_expr :
   | x=ID { Var x }
   | LPAREN e=expr RPAREN { e }
 
-ty :
- (* TODO: How should I put m?  *)
-  | t1=ty RARROW m=mult t2=ty { TyFun(m,t1,t2) }
-  | t1=ty STAR m=mult t2=ty { TyProd(m,t1,t2) }
-  (* | s=session { TySession s } ==> cause conflict *)
+(* NOTE: if I include session to ty, conflict will arise. *)
+ty_or_session :
+  | t=ty { t }
+  | s=session { TySession s }
+
+ty :                            (* session excluded *)
+ (* TODO: How should I put m? *)
+  | t1=ty_or_session RARROW m=mult t2=ty_or_session { TyFun(m,t1,t2) }
+  | t1=ty_or_session STAR m=mult t2=ty_or_session { TyProd(m,t1,t2) }
   | t=simple_ty { t }
 
 simple_ty :
