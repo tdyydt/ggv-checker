@@ -46,11 +46,18 @@ expr :
 
   | LET x=ID EQ e1=expr IN e2=expr %prec prec_let
     { LetExp (x,e1,e2) }
-  | LET x=ID COMMA y=ID EQ e1=expr IN e2=expr %prec prec_let
-    { PairDest(x,y,e1,e2) }
+  (* TODO: improve syntax, but I should put m somewhere *)
+  (* let rec x = fun m (y:t1) : t2 -> e1 in e2 *)
+  | LET REC x=ID EQ FUN m=mult p=para COLON t2=ty RARROW e1=expr
+    IN e2=expr %prec prec_let
+    { let (y,t1) = p in
+      (* LetRecExp (x,y,t1,t2,e1,e2) *)
+      LetExp (x, (FixExp (m,x,y,t1,t2,e1)), e2) }
   (* TODO: Where should I put mult?? *)
   | LPAREN e1=expr COMMA e2=expr RPAREN m=mult
     { PairCons(m,e1,e2) }
+  | LET x=ID COMMA y=ID EQ e1=expr IN e2=expr %prec prec_let
+    { PairDest(x,y,e1,e2) }
 
   | FORK e=simple_expr { ForkExp e }
   | NEW s=simple_session { NewExp s }
@@ -64,6 +71,7 @@ expr :
   | WAIT e=simple_expr { WaitExp e }
   | e=minus_expr { e }
 
+(* parameter; (x:t) or (x:s) *)
 para :
   | LPAREN x=ID COLON t=ty RPAREN { (x,t) }
   | LPAREN x=ID COLON s=session RPAREN { (x, TySession s) }

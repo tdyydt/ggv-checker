@@ -428,6 +428,14 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
             (* "unrestricted functions cannot contain variables of a linear type" *)
      else (TyFun (Lin, t1, t2), ys) (* un t1 && m = Lin *)
 
+  | FixExp (m,x,y,t1,t2,e1) ->
+     let tyenv1 = Environment.add x (TyFun (m,t1,t2)) tyenv in
+     let tyenv2 = Environment.add y t1 tyenv1 in
+     let t2', xs = ty_exp tyenv2 e1 in
+     (* consistency rather than equality *)
+     if con_ty t2' t2 then (TyFun (m,t1,t2), xs)
+     else ty_err "T-Fix: return type does not equal the given annotation"
+
   | AppExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp tyenv e2 in

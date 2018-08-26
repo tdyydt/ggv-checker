@@ -92,11 +92,10 @@ type exp =
   (* FunExp(m,x,t,e) => [\m (x:t) -> e] *)
   | FunExp of mult * id * ty * exp (* Abs *)
   | AppExp of exp * exp
+  (* FixExp (m,x,y,t1,t2,e) ==> [fix m x (y:t1) : t2 -> e] *)
+  | FixExp of mult * id * id * ty * ty * exp
   (* LetExp(x,e1,e2) => [ let x = e1 in e2 ] *)
   | LetExp of id * exp * exp
-  (* LetRecExp(f,x,t1,t2,e1,e2) =>
-   * [let rec f (x:t1) : t2 = e1 in e2] *)
-  | LetRecExp of id * id * ty * ty * exp * exp
   (* PairCons(m,e1,e2) => [ (e1,e2)m ] *)
   | PairCons of mult * exp * exp
   (* PairDest(x,y,e1,e2) => [let x, y = e1 in e2] *)
