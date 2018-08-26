@@ -124,6 +124,8 @@ MENHIR_ENABLED = true
 # OCAML_BYTE_LINK_FLAGS +=
 # OCAML_NATIVE_LINK_FLAGS +=
 
+MENHIR_FLAGS += --explain --infer -v
+
 ################################################
 # Generated files
 #
