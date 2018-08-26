@@ -49,16 +49,16 @@ let mult_of_ty : ty -> mult = function
 
 (* m(T) *)
 let lin ty = mult_of_ty ty = Lin
-(* let un ty = not (lin ty) *)
 let un ty = mult_of_ty ty = Un
+(* let un ty = not (lin ty) *)
 
+(*** subtyping ***)
 
 (* multiplicity order: [m <: n] *)
 let sub_mult m n = match m,n with
   | Un, _ -> true
   | Lin, Lin -> true
   | Lin, Un -> false
-
 
 (* consistent subtyping: [t <~ u] *)
 let rec con_sub_ty (t : ty) (u : ty) : bool = match t,u with
@@ -429,12 +429,43 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else (TyFun (Lin, t1, t2), ys) (* un t1 && m = Lin *)
 
   | FixExp (m,x,y,t1,t2,e1) ->
+     assert (not (Environment.mem x tyenv)); (* FIXME *)
+     assert (not (Environment.mem y tyenv)); (* FIXME *)
+
+     (* NOTE: if x is linear (m = Lin),
+      * x should be used once in e1 *)
+
      let tyenv1 = Environment.add x (TyFun (m,t1,t2)) tyenv in
      let tyenv2 = Environment.add y t1 tyenv1 in
-     let t2', xs = ty_exp tyenv2 e1 in
+     let t2', zs = ty_exp tyenv2 e1 in
      (* consistency rather than equality *)
-     if con_ty t2' t2 then (TyFun (m,t1,t2), xs)
-     else ty_err "T-Fix: return type does not equal the given annotation"
+     if not (con_ty t2' t2) then
+       ty_err "T-Fix: return type does not equal the given annotation";
+     if lin t2 && m = Un then
+       (* Z = {y} ; y should be used *)
+       if VarSet.mem y zs then
+         if VarSet.is_empty (VarSet.remove y zs) then
+           (TyFun (Un,t1,t2), VarSet.empty)
+         else ty_err "T-Fix: Unresterected function contains linear variables"
+       else ty_err ("T-Fix: Unused linear variable: " ^ y)
+     else if lin t2 && m = Lin then
+       (* x,y should be used *)
+       if VarSet.mem x zs then
+         if VarSet.mem y zs then
+           (TyFun (Lin,t1,t2),
+            VarSet.remove x (VarSet.remove y zs))
+         else ty_err ("T-Fix: Unused linear variable: " ^ y)
+       else ty_err ("T-Fix: Unused linear variable: " ^ x)
+     else if un t2 && m = Un then
+       (* Z = {} *)
+       if VarSet.is_empty zs then
+         (TyFun (Un,t1,t2), VarSet.empty)
+       else ty_err "T-Fix: Unresterected function contains linear variables"
+     else (* un t2, m = Lin *)
+       (* x should be used *)
+       if VarSet.mem x zs then
+         (TyFun (Lin,t1,t2), VarSet.remove x zs)
+       else ty_err ("T-Fix: Unused linear variable: " ^ x)
 
   | AppExp (e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
