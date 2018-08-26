@@ -1,8 +1,3 @@
-(* To be removed: *)
-exception Error of string
-let err s = raise (Error s)
-let todo () = err "Not implemented yet."
-
 open Printf
 
 (* AST of the surface language *)

@@ -13,9 +13,14 @@ let rec read_check_print () =
     ty_prog prog;
     read_check_print ()
   with
-  (* parse error (Menhir),
-   * lexer error,
-   * or typing error etc. *)
+  (* e.g. Failure("lexing: empty token") *)
+  | Failure m -> printf "Failure: %s\n" m;
+                 read_check_print ()
+  | Parser.Error ->             (* Menhir *)
+     let token = Lexing.lexeme lexbuf in
+     printf "Parser.Error: unexpected token: %s\n" token;
+     Lexing.flush_input lexbuf;
+     read_check_print ()
   | Typing_error s -> print_string s;
                       print_newline ();
                       read_check_print ()

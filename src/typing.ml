@@ -358,10 +358,6 @@ let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) : unit =
   if VarSet.is_empty zs then ()
   else ty_err "Not disjoint sets"
 
-(* VarSet.t -> VarSet.t -> bool *)
-(* let is_disjoint xs ys =
- *   VarSet.is_empty (VarSet.inter xs ys) *)
-
 (* type of binOp *)
 let ty_binop : binOp -> ty * ty * ty = function
   | Plus | Minus | Mult | Div -> (TyInt, TyInt, TyInt)
@@ -610,6 +606,8 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
 let ty_prog : prog -> unit = function
   | Exp e -> let t, xs = ty_exp Environment.empty e in
-             if un t && VarSet.is_empty xs then
-               print_string "The program is well-typed.\n"
+             if un t && VarSet.is_empty xs then begin
+               print_string "The program is well-typed.\n";
+               Printf.printf "Type of expression: %s\n" (string_of_ty t)
+               end
              else ty_err "T-Exp: ill-typed program"
