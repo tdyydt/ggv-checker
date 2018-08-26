@@ -11,7 +11,7 @@ open Syntax
 %token END PERIOD COMMA
 %token PLUS MINUS STAR SLASH
 %token LT GT LE GE
-%token TRUE FALSE
+%token TRUE FALSE IF THEN ELSE
 %token LET IN EQ
 %token FUN RARROW COLON
 %token FORK NEW SEND RECEIVE
@@ -24,7 +24,7 @@ open Syntax
 (* precedence: lower to higher *)
 (* via: https://caml.inria.fr/pub/docs/manual-ocaml/expr.html *)
 %right prec_let prec_fun
-(* %right prec_if *)
+%right prec_if
 %left LT GT EQ LE GE
 %left PLUS MINUS
 %right RARROW                   (* function ty *)
@@ -39,6 +39,8 @@ toplevel :
 
 expr :
   | e1=expr op=binop e2=expr { BinOp (op, e1, e2) }
+  | IF e1=expr THEN e2=expr ELSE e3=expr %prec prec_if
+    { IfExp (e1,e2,e3) }
   | FUN m=mult p=para RARROW e=expr %prec prec_fun
     { let (x,t) = p in FunExp(m,x,t,e) }
 

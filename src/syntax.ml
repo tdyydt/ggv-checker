@@ -87,7 +87,8 @@ type exp =
   | ILit of int
   | BLit of bool
   | BinOp of binOp * exp * exp
-
+  (* IfExp(e1,e2,e3) => [if e1 then e2 else e3] *)
+  | IfExp of exp * exp * exp
   (* FunExp(m,x,t,e) => [\m (x:t) -> e] *)
   | FunExp of mult * id * ty * exp (* Abs *)
   | AppExp of exp * exp

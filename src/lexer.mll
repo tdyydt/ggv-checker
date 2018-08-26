@@ -10,6 +10,9 @@ let reservedWords = [
     ("end", P.END);
     ("true", P.TRUE);           (* bool *)
     ("false", P.FALSE);
+    ("if", P.IF);
+    ("then", P.THEN);
+    ("else", P.ELSE);
     ("fun", P.FUN);
     ("let", P.LET);
     ("in", P.IN);

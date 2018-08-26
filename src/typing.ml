@@ -351,7 +351,7 @@ let matching_select (t : ty) (l : label) : (label * session) list =
 
 (*** type checking ***)
 
-let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) =
+let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) : unit =
   let zs = VarSet.inter xs ys in
   (* display duplicate elements: zs? *)
   (* violation of linearity *)
@@ -392,6 +392,18 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
          (u3, VarSet.union xs ys)
        else ty_err "T-BinOp-R"
      else ty_err "T-BinOp-L"
+
+  | IfExp (e1,e2,e3) ->
+     let t1, xs = ty_exp tyenv e1 in
+     if con_ty t1 TyBool then
+       let t2, ys = ty_exp tyenv e2 in
+       let t3, zs = ty_exp tyenv e3 in
+       if VarSet.equal ys zs then begin
+           assert_disjoint xs ys; (* ys = zs *)
+           (join_ty t2 t3, VarSet.union (VarSet.union xs ys) zs)
+         end
+       else ty_err "T-If: Same linear variables should be used in then/else clauses"
+     else ty_err "T-If-Test: Not consistent with bool"
 
   | FunExp (m,x,t1,e1) ->
      assert (not (Environment.mem x tyenv)); (* FIXME *)
