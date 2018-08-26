@@ -81,7 +81,6 @@ and string_of_session = function
 
 type binOp = Plus | Minus | Mult | Div | Lt | Gt | Eq | LE | GE
 
-(* TODO: postfix Exp? *)
 type exp =
   | Var of id
   | ULit                        (* unit: () *)
@@ -89,21 +88,27 @@ type exp =
   | BLit of bool
   | BinOp of binOp * exp * exp
 
-  (* OR: Abs *)
-  | FunExp of mult * id * ty * exp   (* \m (x:T) -> e *)
+  (* FunExp(m,x,t,e) => [\m (x:t) -> e] *)
+  | FunExp of mult * id * ty * exp (* Abs *)
   | AppExp of exp * exp
-  | LetExp of id * exp * exp       (* let x = e1 in e2 *)
-
+  (* LetExp(x,e1,e2) => [ let x = e1 in e2 ] *)
+  | LetExp of id * exp * exp
+  (* PairCons(m,e1,e2) => [ (e1,e2)m ] *)
   | PairCons of mult * exp * exp
-  (* let x, y = e1 in e2 *)
+  (* PairDest(x,y,e1,e2) => [let x, y = e1 in e2] *)
   | PairDest of id * id * exp * exp
-  | ForkExp of exp
+  | ForkExp of exp              (* fork e *)
   (* create both channel endpoints,
    * whose types are session & dual(session) *)
+  (* NewExp(s) => [new s] *)
   | NewExp of session
+  (* SendExp(e1,e2) => [send e1 e2] *)
   | SendExp of exp * exp
   | ReceiveExp of exp
+  (* SelectExp(l,e) => [select l e] *)
   | SelectExp of label * exp
+  (* CaseExp(e,[(l1,x1,s1,e1)]) =>
+   * [case e of { l1 (x1:s1). e1 }] *)
   | CaseExp of exp * (label * id * session * exp) list
   | CloseExp of exp
   | WaitExp of exp
