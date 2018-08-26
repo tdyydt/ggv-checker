@@ -12,7 +12,7 @@ open Syntax
 %token PLUS MINUS STAR SLASH
 %token LT GT LE GE
 %token TRUE FALSE IF THEN ELSE
-%token LET IN EQ FIX
+%token LET IN EQ FIX UBAR
 %token FUN RARROW COLON
 %token FORK NEW SEND RECEIVE
 %token SELECT CLOSE WAIT
@@ -51,13 +51,14 @@ expr :
     RARROW e1=expr %prec prec_fun
   { let (y,t1) = p in FixExp (m,x,y,t1,t2,e1) }
 
-  | LET x=ID EQ e1=expr IN e2=expr %prec prec_let
+  | LET x=id_or_wc EQ e1=expr IN e2=expr %prec prec_let
     { LetExp (x,e1,e2) }
 
   (* TODO: Where should I put mult?? *)
   | LPAREN e1=expr COMMA e2=expr RPAREN m=mult
     { PairCons(m,e1,e2) }
-  | LET x=ID COMMA y=ID EQ e1=expr IN e2=expr %prec prec_let
+  | LET x=id_or_wc COMMA y=id_or_wc EQ e1=expr
+    IN e2=expr %prec prec_let
     { PairDest(x,y,e1,e2) }
 
   | FORK e=simple_expr { ForkExp e }
@@ -86,6 +87,12 @@ para :
   | EQ { Eq }
   | LE { LE }
   | GE { GE }
+
+%inline id_or_wc :
+  | x=ID { x }
+  (* NOTE: should be [fresh_id ()], as long as I forbid
+   * multiple use of same variable names *)
+  | UBAR { "_" }
 
 (* case branch *)
 branch:

@@ -54,6 +54,7 @@ rule main = parse
 | ";" { P.SEMI }
 | "." { P.PERIOD }
 | "," { P.COMMA }
+| "_" { P.UBAR }                (* wildcard *)
 
 | "+" { P.PLUS }
 | "-" { P.MINUS }
