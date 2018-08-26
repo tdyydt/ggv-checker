@@ -402,8 +402,6 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else ty_err "T-If-Test: Not consistent with bool"
 
   | FunExp (m,x,t1,e1) ->
-     assert (not (Environment.mem x tyenv)); (* FIXME *)
-
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e1 in
      if lin t1 && m = Un then
        (* Y = {x} *)
@@ -425,9 +423,6 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else (TyFun (Lin, t1, t2), ys) (* un t1 && m = Lin *)
 
   | FixExp (m,x,y,t1,t2,e1) ->
-     assert (not (Environment.mem x tyenv)); (* FIXME *)
-     assert (not (Environment.mem y tyenv)); (* FIXME *)
-
      (* NOTE: if x is linear (m = Lin),
       * x should be used once in e1 *)
 
@@ -472,8 +467,6 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else ty_err "T-App: Not consistent subtype"
 
   | LetExp (x,e1,e2) ->
-     assert (not (Environment.mem x tyenv)); (* FIXME *)
-
      let t1, xs = ty_exp tyenv e1 in
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e2 in
      assert_disjoint xs ys;
@@ -496,10 +489,6 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      else (TyProd (Lin,t1,t2), VarSet.union xs ys)
 
   | PairDest (x1,x2,e1,e2) ->
-     (* 変数名の上書きを(一時的に)禁止 *)
-     assert (not (Environment.mem x1 tyenv));
-     assert (not (Environment.mem x2 tyenv));
-
      let t, ys = ty_exp tyenv e1 in
      let _, t1, t2 = matching_prod t in
      let u, zs = ty_exp (Environment.add x1 t1

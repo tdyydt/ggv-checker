@@ -11,7 +11,11 @@ type 'a t = 'a M.t
 
 let empty = M.empty
 
-let add x v env = M.add x v env
+let add x v env =
+  if M.mem x env then
+    (* variable shadowing is not supported/allowed *)
+    failwith ("currently you cannot use same names twice: " ^ x)
+  else M.add x v env
 
 let remove x env = M.remove x env
 
