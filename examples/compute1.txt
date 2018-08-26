@@ -1,0 +1,36 @@
+(* -*- mode: tuareg; -*- *)
+
+(* section 2.1/2.2 (static) *)
+let computeServer =
+  fun un (c : &{ neg : ?int.!int.end!
+               , add : ?int.?int.!int.end! }) ->
+  case c of {
+    neg (c1 : ?int.!int.end!).
+      let v, c2 = receive c1 in
+      let c3 = send (-v) c2 in
+      close c3;
+    add (c1 : ?int.?int.!int.end!).
+      let v1, c2 = receive c1 in
+      let v2, c3 = receive c2 in
+      let c4 = send (v1 + v2) c3 in
+      close c4
+  }
+in
+let negationClient =
+  fun un (x : int) ->
+  fun un (d : +{ neg : !int.?int.end? }) ->
+  let d1 = select neg d in
+  let d2 = send x d1 in
+  let y, d3 = receive d2 in
+  let _ = wait d3 in
+  y
+in
+let main =
+  let c, d =
+    new (&{ neg : ?int.!int.end!
+          , add : ?int.?int.!int.end! }) in
+  let _ = fork (computeServer c) in
+  let v = negationClient 3 d in
+  v
+in main
+;;

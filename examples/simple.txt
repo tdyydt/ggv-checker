@@ -1,0 +1,17 @@
+(* -*- mode: tuareg; -*- *)
+
+(* section 2.6 ; static version *)
+let client = fun un (c : ?int.end?) ->
+  let v, c1 = receive c in
+  wait c1
+in
+let server = fun un (d : !int.end!) ->
+  let d1 = send 42 d in
+  close d1
+in
+let main =
+  let c, d = new (?int.end?) in
+  let _ = fork (client c) in
+  server d
+in main
+;;

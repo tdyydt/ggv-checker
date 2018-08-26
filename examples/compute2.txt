@@ -1,0 +1,43 @@
+(* -*- mode: tuareg; -*- *)
+
+(* section 2.4 (gradual) *)
+(* fserve is used in flexiServer *)
+let fserve =
+  fix un fserve (n:int) : (Dyn ->un DC ->un unit) ->
+  fun un (op:Dyn) -> fun un (c:DC) ->
+  if n = 0 then
+    close (send op c)
+  else
+    let v, c1 = receive c in
+    fserve (n - 1) (op v) c1
+in
+let flexiServer =
+  fun un (c : &{ neg : ?int.!int.end!
+            , add : ?int.?int.!int.end! }) ->
+  case c of {
+    neg (c1 : ?int.!int.end!).
+      fserve 1 (fun un (x:int) -> -x) c1;
+    add (c1 : ?int.?int.!int.end!).
+      fserve 2 (fun un (x:int) -> fun un (y:int) -> x + y) c1
+  }
+(* in flexiServer *)
+in
+
+let negationClient =
+  fun un (x : int) ->
+  fun un (d : +{ neg : !int.?int.end? }) ->
+  let d1 = select neg d in
+  let d2 = send x d1 in
+  let y, d3 = receive d2 in
+  let _ = wait d3 in
+  y
+in
+let main =
+  let c, d =
+    new (&{ neg : ?int.!int.end!
+          , add : ?int.?int.!int.end! }) in
+  let _ = fork (flexiServer c) in
+  let v = negationClient 3 d in
+  v
+in main
+;;
