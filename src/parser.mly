@@ -43,16 +43,17 @@ expr :
     { IfExp (e1,e2,e3) }
   | FUN m=mult p=para RARROW e=expr %prec prec_fun
     { let (x,t) = p in FunExp(m,x,t,e) }
+  (* TODO: improve syntax;
+   * x will always appear twice, wierd syntax?
+   * let-rec would be better but I can't tell where to put m in that case *)
+  (* fix m x (y:t1) : t2 -> e1 *)
+  | FIX m=mult x=ID p=para COLON t2=simple_ty
+    RARROW e1=expr %prec prec_fun
+  { let (y,t1) = p in FixExp (m,x,y,t1,t2,e1) }
 
   | LET x=ID EQ e1=expr IN e2=expr %prec prec_let
     { LetExp (x,e1,e2) }
-  (* TODO: improve syntax, but I should put m somewhere *)
-  (* let x = fix m (y:t1) : t2 -> e1 in e2 *)
-  | LET x=ID EQ FIX m=mult p=para COLON t2=simple_ty RARROW e1=expr
-    IN e2=expr %prec prec_let
-    { let (y,t1) = p in
-      (* LetRecExp (x,y,t1,t2,e1,e2) *)
-      LetExp (x, (FixExp (m,x,y,t1,t2,e1)), e2) }
+
   (* TODO: Where should I put mult?? *)
   | LPAREN e1=expr COMMA e2=expr RPAREN m=mult
     { PairCons(m,e1,e2) }
