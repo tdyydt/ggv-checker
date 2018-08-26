@@ -94,6 +94,9 @@ type exp =
   | AppExp of exp * exp
   (* LetExp(x,e1,e2) => [ let x = e1 in e2 ] *)
   | LetExp of id * exp * exp
+  (* LetRecExp(f,x,t1,t2,e1,e2) =>
+   * [let rec f (x:t1) : t2 = e1 in e2] *)
+  | LetRecExp of id * id * ty * ty * exp * exp
   (* PairCons(m,e1,e2) => [ (e1,e2)m ] *)
   | PairCons of mult * exp * exp
   (* PairDest(x,y,e1,e2) => [let x, y = e1 in e2] *)

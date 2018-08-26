@@ -12,7 +12,7 @@ open Syntax
 %token PLUS MINUS STAR SLASH
 %token LT GT LE GE
 %token TRUE FALSE IF THEN ELSE
-%token LET IN EQ
+%token LET IN EQ REC
 %token FUN RARROW COLON
 %token FORK NEW SEND RECEIVE
 %token SELECT CLOSE WAIT
