@@ -3,9 +3,8 @@ open Util
 
 type tyenv = ty Environment.t
 
-(* set of variable *)
-(* OR: IdSet, Variables *)
-module VarSet =
+(* set of variables/ids *)
+module IdSet =
   Set.Make(
       struct
         type t = id
@@ -374,11 +373,11 @@ let matching_select (t : ty) (l : label) : (label * session) list =
 
 (*** type checking ***)
 
-let assert_disjoint (xs : VarSet.t) (ys : VarSet.t) : unit =
-  let zs = VarSet.inter xs ys in
+let assert_disjoint (xs : IdSet.t) (ys : IdSet.t) : unit =
+  let zs = IdSet.inter xs ys in
   (* display duplicate elements: zs? *)
   (* violation of linearity *)
-  if VarSet.is_empty zs then ()
+  if IdSet.is_empty zs then ()
   else ty_err "Not disjoint sets"
 
 (* type of binOp *)
@@ -387,19 +386,19 @@ let ty_binop : binOp -> ty * ty * ty = function
   | (Lt | Gt | Eq | LE | GE) -> (TyInt, TyInt, TyBool)
 
 (* returns the set of free linear variables used in typing *)
-let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
+let rec ty_exp (tyenv : tyenv) (e : exp) : ty * IdSet.t =
   match e with
   | Var x -> begin
       try
         let t = Environment.find x tyenv in
-        if lin t then (t, VarSet.singleton x)
-        else (t, VarSet.empty)
+        if lin t then (t, IdSet.singleton x)
+        else (t, IdSet.empty)
       with
       | Not_found -> ty_err ("T-Var: Not bound: " ^ x)
     end
-  | ULit -> (TyUnit, VarSet.empty)
-  | ILit _ -> (TyInt, VarSet.empty)
-  | BLit _ -> (TyBool, VarSet.empty)
+  | ULit -> (TyUnit, IdSet.empty)
+  | ILit _ -> (TyInt, IdSet.empty)
+  | BLit _ -> (TyBool, IdSet.empty)
 
   | BinOp (op, e1, e2) ->
      let t1, xs = ty_exp tyenv e1 in
@@ -408,7 +407,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let u1, u2, u3 = ty_binop op in
      if con_sub_ty t1 u1 then
        if con_sub_ty t2 u2 then
-         (u3, VarSet.union xs ys)
+         (u3, IdSet.union xs ys)
        else ty_err "T-BinOp-R"
      else ty_err "T-BinOp-L"
 
@@ -417,9 +416,9 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      if con_ty t1 TyBool then
        let t2, ys = ty_exp tyenv e2 in
        let t3, zs = ty_exp tyenv e3 in
-       if VarSet.equal ys zs then begin
+       if IdSet.equal ys zs then begin
            assert_disjoint xs ys; (* ys = zs *)
-           (join_ty t2 t3, VarSet.union (VarSet.union xs ys) zs)
+           (join_ty t2 t3, IdSet.union (IdSet.union xs ys) zs)
          end
        else ty_err "T-If: Same linear variables should be used in then/else clauses"
      else ty_err "T-If-Test: Not consistent with bool"
@@ -428,19 +427,19 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t2, ys = ty_exp (Environment.add x t1 tyenv) e1 in
      if lin t1 && m = Un then
        (* Y = {x} *)
-       if VarSet.mem x ys then
-         if VarSet.is_empty (VarSet.remove x ys) then
-           (TyFun (Un, t1, t2), VarSet.empty)
+       if IdSet.mem x ys then
+         if IdSet.is_empty (IdSet.remove x ys) then
+           (TyFun (Un, t1, t2), IdSet.empty)
          else ty_err "T-Fun: Unresterected function contains linear variables"
        else ty_err ("T-Fun: Unused linear variable: " ^ x)
      else if lin t1 && m = Lin then
-       if VarSet.mem x ys then
-         (TyFun (Lin, t1, t2), VarSet.remove x ys)
+       if IdSet.mem x ys then
+         (TyFun (Lin, t1, t2), IdSet.remove x ys)
        else ty_err ("T-Fun: Unused linear variable: " ^ x)
      else if un t1 && m = Un then
        (* Y = {} *)
-       if VarSet.is_empty ys then
-         (TyFun (Un, t1, t2), VarSet.empty)
+       if IdSet.is_empty ys then
+         (TyFun (Un, t1, t2), IdSet.empty)
        else ty_err "T-Fun: Unresterected function contains linear variables"
             (* "unrestricted functions cannot contain variables of a linear type" *)
      else (TyFun (Lin, t1, t2), ys) (* un t1 && m = Lin *)
@@ -457,28 +456,28 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
        ty_err "T-Fix: return type does not equal the given annotation";
      if lin t2 && m = Un then
        (* Z = {y} ; y should be used *)
-       if VarSet.mem y zs then
-         if VarSet.is_empty (VarSet.remove y zs) then
-           (TyFun (Un,t1,t2), VarSet.empty)
+       if IdSet.mem y zs then
+         if IdSet.is_empty (IdSet.remove y zs) then
+           (TyFun (Un,t1,t2), IdSet.empty)
          else ty_err "T-Fix: Unresterected function contains linear variables"
        else ty_err ("T-Fix: Unused linear variable: " ^ y)
      else if lin t2 && m = Lin then
        (* x,y should be used *)
-       if VarSet.mem x zs then
-         if VarSet.mem y zs then
+       if IdSet.mem x zs then
+         if IdSet.mem y zs then
            (TyFun (Lin,t1,t2),
-            VarSet.remove x (VarSet.remove y zs))
+            IdSet.remove x (IdSet.remove y zs))
          else ty_err ("T-Fix: Unused linear variable: " ^ y)
        else ty_err ("T-Fix: Unused linear variable: " ^ x)
      else if un t2 && m = Un then
        (* Z = {} *)
-       if VarSet.is_empty zs then
-         (TyFun (Un,t1,t2), VarSet.empty)
+       if IdSet.is_empty zs then
+         (TyFun (Un,t1,t2), IdSet.empty)
        else ty_err "T-Fix: Unresterected function contains linear variables"
      else (* un t2, m = Lin *)
        (* x should be used *)
-       if VarSet.mem x zs then
-         (TyFun (Lin,t1,t2), VarSet.remove x zs)
+       if IdSet.mem x zs then
+         (TyFun (Lin,t1,t2), IdSet.remove x zs)
        else ty_err ("T-Fix: Unused linear variable: " ^ x)
 
   | AppExp (e1,e2) ->
@@ -486,7 +485,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      let t2, ys = ty_exp tyenv e2 in
      assert_disjoint xs ys;
      let _, t11, t12 = matching_fun t1 in
-     if con_sub_ty t2 t11 then (t12, VarSet.union xs ys)
+     if con_sub_ty t2 t11 then (t12, IdSet.union xs ys)
      else ty_err "T-App: Not consistent subtype"
 
   | LetExp (x,e1,e2) ->
@@ -495,10 +494,10 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      assert_disjoint xs ys;
      (* if lin(t1), x should be used in e2 *)
      if lin t1 then
-       if VarSet.mem x ys then
-         (t2, VarSet.union xs (VarSet.remove x ys))
+       if IdSet.mem x ys then
+         (t2, IdSet.union xs (IdSet.remove x ys))
        else ty_err ("T-Let: Unused linear variable: " ^ x)
-     else (t2, VarSet.union xs ys) (* un(t) *)
+     else (t2, IdSet.union xs ys) (* un(t) *)
 
   | PairCons (m,e1,e2) ->
      let t1, xs = ty_exp tyenv e1 in
@@ -507,9 +506,9 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      if m = Un then
        (* NOTE: xs, ys need not be empty *)
        if lin t1 && lin t2 then
-         (TyProd (Un,t1,t2), VarSet.union xs ys)
+         (TyProd (Un,t1,t2), IdSet.union xs ys)
        else ty_err "T-PairCons: Linear element in unrestrected pair"
-     else (TyProd (Lin,t1,t2), VarSet.union xs ys)
+     else (TyProd (Lin,t1,t2), IdSet.union xs ys)
 
   | PairDest (x1,x2,e1,e2) ->
      let t, ys = ty_exp tyenv e1 in
@@ -519,27 +518,27 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      in
      (* TODO: assert_disjoint here? *)
      if lin t1 && lin t2 then
-       if VarSet.mem x1 zs then
-         if VarSet.mem x2 zs then
-           let zs' = VarSet.remove x1 (VarSet.remove x2 zs) in
+       if IdSet.mem x1 zs then
+         if IdSet.mem x2 zs then
+           let zs' = IdSet.remove x1 (IdSet.remove x2 zs) in
            assert_disjoint ys zs';
-           (u, VarSet.union ys zs')
+           (u, IdSet.union ys zs')
          else ty_err ("T-PairDest: Unused linear variable: " ^ x2)
        else ty_err ("T-PairDest: Unused linear variable: " ^ x1)
      else if lin t1 && un t2 then
-       if VarSet.mem x1 zs then
-         let zs' = VarSet.remove x1 zs in
+       if IdSet.mem x1 zs then
+         let zs' = IdSet.remove x1 zs in
          assert_disjoint ys zs';
-         (u, VarSet.union ys zs')
+         (u, IdSet.union ys zs')
        else ty_err ("T-PairDest: Unused linear variable: " ^ x1)
      else if un t1 && lin t2 then
-       if VarSet.mem x2 zs then
-         let zs' = VarSet.remove x2 zs in
+       if IdSet.mem x2 zs then
+         let zs' = IdSet.remove x2 zs in
          assert_disjoint ys zs';
-         (u, VarSet.union ys zs')
+         (u, IdSet.union ys zs')
        else ty_err ("T-PairDest: Unused linear variable: " ^ x2)
      else let _ = assert_disjoint ys zs in
-          (u, VarSet.union ys zs)
+          (u, IdSet.union ys zs)
 
   | ForkExp e ->
      let t, xs = ty_exp tyenv e in
@@ -548,7 +547,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
   | NewExp s ->
      let t = TyProd (Lin, TySession s, TySession (dual s)) in
-     (t, VarSet.empty)
+     (t, IdSet.empty)
 
   | SendExp (e1,e2) ->          (* e2 is channel *)
      let t1, xs = ty_exp tyenv e1 in
@@ -556,7 +555,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      assert_disjoint xs ys;
      let t3, s = matching_send t2 in
      if con_sub_ty t1 t3
-     then (TySession s, VarSet.union xs ys)
+     then (TySession s, IdSet.union xs ys)
      else ty_err "T-Send: Not consistent subtype"
 
   | ReceiveExp e1 ->
@@ -583,19 +582,19 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
      (* choices of branches *)
      let choices = List.map (fun (l,_,s,_) -> (l,s)) branches in
      if con_sub_ty t (TySession (TyCase choices)) then
-       let (us : ty list), (yss : VarSet.t list) =
+       let (us : ty list), (yss : IdSet.t list) =
          List.split
            (List.map (fun (l,x,s,e) ->
                 let u, ys = ty_exp (Environment.add x (TySession s) tyenv) e in
-                if VarSet.mem x ys then
-                  (u, VarSet.remove x ys) (* Uj,Yj *)
+                if IdSet.mem x ys then
+                  (u, IdSet.remove x ys) (* Uj,Yj *)
                 else ty_err ("T-Case: Unused linear variable: " ^ x))
               branches)
        in
        (* ys' = ys1 = ys2 = ... *)
-       let ys' : VarSet.t =
+       let ys' : IdSet.t =
          List.fold_left (fun ys_acc ys ->
-             if VarSet.equal ys ys_acc then ys
+             if IdSet.equal ys ys_acc then ys
              else ty_err ("T-Case: Same linear variables should be used in case branches"))
            (List.hd yss)        (* use first elem *)
            yss
@@ -604,7 +603,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
          try
            let u' = bigjoin us in
            assert_disjoint xs ys';
-           (u', VarSet.union xs ys')
+           (u', IdSet.union xs ys')
          with
          | Join_meet_undef -> ty_err "T-Case: Join undefined"
        end
@@ -623,7 +622,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
 
 let ty_prog : prog -> unit = function
   | Exp e -> let t, xs = ty_exp Environment.empty e in
-             if un t && VarSet.is_empty xs then begin
+             if un t && IdSet.is_empty xs then begin
                print_string "The program is well-typed.\n";
                Printf.printf "Type of expression: %s\n" (string_of_ty t)
                end
