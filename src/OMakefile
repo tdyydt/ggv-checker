@@ -157,6 +157,7 @@ FILES[] =
    parser
    typing
    main
+   util
 
 PROGRAM = tycheck
 OCAML_LIBS +=

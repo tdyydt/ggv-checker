@@ -1,4 +1,5 @@
 open Syntax
+open Util
 
 type tyenv = ty Environment.t
 
@@ -208,14 +209,20 @@ and join_session (s : session) (r : session) : session = match s,r with
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      let labels3 = LabelSet.inter labels1 labels2 in
-     if LabelSet.is_empty labels3 then
-       raise Join_meet_undef
-     else
-       TySelect (List.map (fun l ->
-                     let s = List.assoc l choices1 in
-                     let r = List.assoc l choices2 in
-                     (l, join_session s r))
-                   (LabelSet.elements labels3))
+     (* intersection, but ignore where join doesn't exist *)
+     let new_choices_opt : (label * session) option list =
+       List.map (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           try Some (l, join_session s r) with
+           | Join_meet_undef -> None)
+         (LabelSet.elements labels3) in
+     let new_choices = remove_none new_choices_opt in
+     (* choice set cannot be empty in TySelect *)
+     begin match new_choices with
+     | [] -> raise Join_meet_undef
+     | _ :: _ -> TySelect new_choices
+     end
 
   | TyCase choices1, TyCase choices2 ->
      let labels1 = LabelSet.of_list (List.map fst choices1) in
@@ -227,19 +234,24 @@ and join_session (s : session) (r : session) : session = match s,r with
          (LabelSet.elements labels3) in
      (* I /\ J *)
      let labels4 = LabelSet.inter labels1 labels2 in
-     let new_choices2 =         (* empty is ok *)
+     let new_choice2_opt =
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
-           (l, join_session s r))
+           try Some (l, join_session s r) with
+           | Join_meet_undef -> None)
          (LabelSet.elements labels4) in
+     let new_choices2 = remove_none new_choice2_opt in
      (* J - I *)
      let labels5 = LabelSet.diff labels2 labels1 in
      let new_choices3 =
        List.map (fun l -> (l, List.assoc l choices2))
          (LabelSet.elements labels5) in
-     (* Merge three choice lists; cannot be empty *)
-     TyCase (new_choices1 @ new_choices2 @ new_choices3)
+     (* Merge three choice lists; could be empty *)
+     begin match new_choices1 @ new_choices2 @ new_choices3 with
+     | [] -> raise Join_meet_undef
+     | choices' -> TyCase choices'
+     end
 
   | TyClose, TyClose -> TyClose
   | TyWait, TyWait -> TyWait
@@ -277,34 +289,43 @@ and meet_session (s : session) (r : session) : session = match s,r with
          (LabelSet.elements labels3) in
      (* I /\ J *)
      let labels4 = LabelSet.inter labels1 labels2 in
-     let new_choices2 =         (* empty is ok *)
+     let new_choices2_opt =
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
-           (l, join_session s r))
+           try Some (l, join_session s r) with
+           | Join_meet_undef -> None)
          (LabelSet.elements labels4) in
+     let new_choices2 = remove_none new_choices2_opt in
      (* J - I *)
      let labels5 = LabelSet.diff labels2 labels1 in
      let new_choices3 =
        List.map (fun l -> (l, List.assoc l choices2))
          (LabelSet.elements labels5) in
-     (* Merge three choice lists; cannot be empty *)
-     TySelect (new_choices1 @ new_choices2 @ new_choices3)
+     (* Merge three choice lists; could be empty *)
+     begin match new_choices1 @ new_choices2 @ new_choices3 with
+     | [] -> raise Join_meet_undef
+     | choices' -> TySelect choices'
+     end
 
   | TyCase choices1, TyCase choices2 ->
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      (* intersection of lists *)
      let labels3 = LabelSet.inter labels1 labels2 in
+     let new_choices_opt =
+       List.map (fun l ->
+           let s = List.assoc l choices1 in
+           let r = List.assoc l choices2 in
+           try Some (l, meet_session s r) with
+           | Join_meet_undef -> None)
+         (LabelSet.elements labels3) in
+     let new_choices = remove_none new_choices_opt in
      (* choice set cannot be empty in TyCase *)
-     if LabelSet.is_empty labels3 then
-       raise Join_meet_undef
-     else
-       TyCase (List.map (fun l ->
-                   let s = List.assoc l choices1 in
-                   let r = List.assoc l choices2 in
-                   (l, meet_session s r))
-                 (LabelSet.elements labels3))
+     begin match new_choices with
+     | [] -> raise Join_meet_undef
+     | _ :: _ -> TyCase new_choices
+     end
 
   | TyClose, TyClose -> TyClose
   | TyWait, TyWait -> TyWait
@@ -313,7 +334,7 @@ and meet_session (s : session) (r : session) : session = match s,r with
   | _ -> raise Join_meet_undef
 
 let rec bigjoin (tys: ty list) : ty =
-  (* TyDyn may work? and it is better than hd *)
+  (* TyDyn may work? then it would be better than hd *)
   List.fold_left (fun t_acc t ->
       join_ty t_acc t)
     (List.hd tys) tys
