@@ -24,6 +24,9 @@ module LabelSet =
 exception Typing_error of string
 let ty_err s = raise (Typing_error s)
 
+exception Join_undef
+exception Meet_undef
+
 (*** Types ***)
 
 (* duality *)
@@ -195,7 +198,7 @@ let rec join_ty (t : ty) (u : ty) : ty = match t,u with
   | TySession s, TySession r -> TySession (join_session s r)
   | TyDyn, t -> t
   | t, TyDyn -> t
-  | _ -> ty_err "join_ty: undefined"
+  | _ -> raise Join_undef
 
 and join_session (s : session) (r : session) : session = match s,r with
   | TySend (t1,s1), TySend (t2,s2) ->
@@ -207,7 +210,7 @@ and join_session (s : session) (r : session) : session = match s,r with
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      let labels3 = LabelSet.inter labels1 labels2 in
      if LabelSet.is_empty labels3 then
-       ty_err "join_session: undefined"
+       raise Join_undef
      else
        TySelect (List.map (fun l ->
                      let s = List.assoc l choices1 in
@@ -243,7 +246,7 @@ and join_session (s : session) (r : session) : session = match s,r with
   | TyWait, TyWait -> TyWait
   | TyDC, s -> s
   | s, TyDC -> s
-  | _ -> ty_err "join_session: undefined"
+  | _ -> raise Join_undef
 
 and meet_ty (t : ty) (u : ty) : ty = match t,u with
   | TyUnit, TyUnit -> TyUnit
@@ -258,7 +261,7 @@ and meet_ty (t : ty) (u : ty) : ty = match t,u with
   | TySession s, TySession r -> TySession (meet_session s r)
   | TyDyn, t -> t
   | t, TyDyn -> t
-  | _ -> ty_err "meet_ty: undefined"
+  | _ -> raise Meet_undef
 
 and meet_session (s : session) (r : session) : session = match s,r with
   | TySend (t1,s1), TySend (t2,s2) ->
@@ -296,7 +299,7 @@ and meet_session (s : session) (r : session) : session = match s,r with
      let labels3 = LabelSet.inter labels1 labels2 in
      (* choice set cannot be empty in TyCase *)
      if LabelSet.is_empty labels3 then
-       ty_err "meet_session: undefined"
+       raise Meet_undef
      else
        TyCase (List.map (fun l ->
                    let s = List.assoc l choices1 in
@@ -308,7 +311,7 @@ and meet_session (s : session) (r : session) : session = match s,r with
   | TyWait, TyWait -> TyWait
   | TyDC, s -> s
   | s, TyDC -> s
-  | _ -> ty_err "meet_session: undefined"
+  | _ -> raise Meet_undef
 
 let rec bigjoin (tys: ty list) : ty =
   (* TyDyn may work? and it is better than hd *)
@@ -577,9 +580,15 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * VarSet.t =
            (List.hd yss)        (* use first elem *)
            yss
        in
-       let u' = bigjoin us in
-       assert_disjoint xs ys';
-       (u', VarSet.union xs ys')
+       begin
+         try
+           let u' = bigjoin us in
+           assert_disjoint xs ys';
+           (u', VarSet.union xs ys')
+         with
+         | Join_undef | Meet_undef ->
+            ty_err "T-Case: Join undefined"
+       end
      else ty_err "T-Case: Not consistent subtype"
 
   | CloseExp e ->
