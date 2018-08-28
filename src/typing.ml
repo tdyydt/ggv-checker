@@ -1,5 +1,4 @@
 open Syntax
-open Util
 
 type tyenv = ty Environment.t
 
@@ -182,57 +181,39 @@ let meet_mult (m : mult) (n : mult) :mult = match m,n with
   | Lin, Lin -> Lin
 
 (* lifted join/meet (subtyping & precision) *)
-let rec join_ty (t : ty) (u : ty) : ty option = match t,u with
-  (* | t, u when t = u -> Some t *)
-  | TyUnit, TyUnit -> Some TyUnit
+let rec join_ty (t : ty) (u : ty) : ty = match t,u with
+  (* | t, u when t = u -> t *)
+  | TyUnit, TyUnit -> TyUnit
   | TyFun (m,t1,u1), TyFun (n,t2,u2) ->
-     begin match meet_ty t1 t2, join_ty u1 u2 with
-     | Some t', Some u' -> Some (TyFun (join_mult m n, t', u'))
-     | _ -> None
-     end
+     TyFun (join_mult m n,
+            meet_ty t1 t2,
+            join_ty u1 u2)
   | TyProd (m, t1, u1), TyProd (n, t2, u2) ->
-     begin match join_ty t1 t2, join_ty u1 u2 with
-     | Some t', Some u' -> Some (TyProd (join_mult m n, t', u'))
-     | _ -> None
-     end
-  | TySession s, TySession r ->
-     begin match join_session s r with
-     | Some s' -> Some (TySession s')
-     | None -> None
-     end
-  | TyDyn, t -> Some t
-  | t, TyDyn -> Some t
-  | _ -> None
+     TyProd (join_mult m n,
+             join_ty t1 t2,
+             join_ty u1 u2)
+  | TySession s, TySession r -> TySession (join_session s r)
+  | TyDyn, t -> t
+  | t, TyDyn -> t
+  | _ -> ty_err "join_ty: undefined"
 
-and join_session (s : session) (r : session) : session option = match s,r with
+and join_session (s : session) (r : session) : session = match s,r with
   | TySend (t1,s1), TySend (t2,s2) ->
-     begin match meet_ty t1 t2, join_session s1 s2 with
-     | Some t', Some s' -> Some (TySend (t', s'))
-     | _ -> None
-     end
+     TySend (meet_ty t1 t2, join_session s1 s2)
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
-     begin match join_ty t1 t2, join_session s1 s2 with
-     | Some t', Some s' -> Some (TyReceive (t', s'))
-     | _ -> None
-     end
+     TyReceive (join_ty t1 t2, join_session s1 s2)
   | TySelect choices1, TySelect choices2 ->
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      let labels3 = LabelSet.inter labels1 labels2 in
-     (* if LabelSet.is_empty labels3 then None *)
-     let new_choices_opt : (label * session) option list =
-       List.map (fun l ->
-           let s = List.assoc l choices1 in
-           let r = List.assoc l choices2 in
-           match join_session s r with
-           | Some s' -> Some (l, s')
-           | None -> None)
-         (LabelSet.elements labels3) in
-     let new_choices = remove_none new_choices_opt in
-     begin match new_choices with
-     | _ :: _ -> Some (TySelect new_choices)
-     | [] -> None
-     end
+     if LabelSet.is_empty labels3 then
+       ty_err "join_session: undefined"
+     else
+       TySelect (List.map (fun l ->
+                     let s = List.assoc l choices1 in
+                     let r = List.assoc l choices2 in
+                     (l, join_session s r))
+                   (LabelSet.elements labels3))
 
   | TyCase choices1, TyCase choices2 ->
      let labels1 = LabelSet.of_list (List.map fst choices1) in
@@ -244,34 +225,27 @@ and join_session (s : session) (r : session) : session option = match s,r with
          (LabelSet.elements labels3) in
      (* I /\ J *)
      let labels4 = LabelSet.inter labels1 labels2 in
-     let new_choices2_opt =
+     let new_choices2 =         (* empty is ok *)
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
-           match join_session s r with
-           | Some s' -> Some (l, s')
-           | None -> None)
+           (l, join_session s r))
          (LabelSet.elements labels4) in
-     (* empty is ok *)
-     let new_choices2 = remove_none new_choices2_opt in
      (* J - I *)
      let labels5 = LabelSet.diff labels2 labels1 in
      let new_choices3 =
        List.map (fun l -> (l, List.assoc l choices2))
          (LabelSet.elements labels5) in
-     (* Merge three choice lists; could be empty *)
-     begin match new_choices1 @ new_choices2 @ new_choices3 with
-     | [] -> None
-     | choices' -> Some (TyCase choices')
-     end
+     (* Merge three choice lists; cannot be empty *)
+     TyCase (new_choices1 @ new_choices2 @ new_choices3)
 
-  | TyClose, TyClose -> Some TyClose
-  | TyWait, TyWait -> Some TyWait
-  | TyDC, s -> Some s
-  | s, TyDC -> Some s
-  | _ -> None
+  | TyClose, TyClose -> TyClose
+  | TyWait, TyWait -> TyWait
+  | TyDC, s -> s
+  | s, TyDC -> s
+  | _ -> ty_err "join_session: undefined"
 
-and meet_ty (t : ty) (u : ty) : ty option = match t,u with
+and meet_ty (t : ty) (u : ty) : ty = match t,u with
   | TyUnit, TyUnit -> TyUnit
   | TyFun (m,t1,u1), TyFun (n,t2,u2) ->
      TyFun (meet_mult m n,
@@ -286,7 +260,7 @@ and meet_ty (t : ty) (u : ty) : ty option = match t,u with
   | t, TyDyn -> t
   | _ -> ty_err "meet_ty: undefined"
 
-and meet_session (s : session) (r : session) : session option = match s,r with
+and meet_session (s : session) (r : session) : session = match s,r with
   | TySend (t1,s1), TySend (t2,s2) ->
      TySend (join_ty t1 t2, meet_session s1 s2)
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
