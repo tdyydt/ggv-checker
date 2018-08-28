@@ -205,18 +205,17 @@ and join_session (s : session) (r : session) : session = match s,r with
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
      TyReceive (join_ty t1 t2, join_session s1 s2)
   | TySelect choices1, TySelect choices2 ->
+     (* intersection *)
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      let labels3 = LabelSet.inter labels1 labels2 in
-     (* intersection, but ignore where join doesn't exist *)
-     let new_choices_opt : (label * session) option list =
+     let new_choices : (label * session) list =
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
-           try Some (l, join_session s r) with
-           | Join_meet_undef -> None)
+           try (l, join_session s r) with
+           | Join_meet_undef -> raise Join_meet_undef)
          (LabelSet.elements labels3) in
-     let new_choices = remove_none new_choices_opt in
      (* choice set cannot be empty in TySelect *)
      begin match new_choices with
      | [] -> raise Join_meet_undef
@@ -224,6 +223,7 @@ and join_session (s : session) (r : session) : session = match s,r with
      end
 
   | TyCase choices1, TyCase choices2 ->
+     (* union *)
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      (* I - J *)
@@ -232,8 +232,9 @@ and join_session (s : session) (r : session) : session = match s,r with
        List.map (fun l -> (l, List.assoc l choices1))
          (LabelSet.elements labels3) in
      (* I /\ J *)
+     (* intersection, but ignore where join doesn't exist *)
      let labels4 = LabelSet.inter labels1 labels2 in
-     let new_choice2_opt =
+     let new_choice2_opt : (label * session) option list =
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
@@ -279,6 +280,7 @@ and meet_session (s : session) (r : session) : session = match s,r with
   | TyReceive (t1,s1), TyReceive (t2,s2) ->
      TyReceive (meet_ty t1 t2, meet_session s1 s2)
   | TySelect choices1, TySelect choices2 ->
+     (* union *)
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
      (* I - J *)
@@ -308,18 +310,17 @@ and meet_session (s : session) (r : session) : session = match s,r with
      end
 
   | TyCase choices1, TyCase choices2 ->
+     (* intersection *)
      let labels1 = LabelSet.of_list (List.map fst choices1) in
      let labels2 = LabelSet.of_list (List.map fst choices2) in
-     (* intersection of lists *)
      let labels3 = LabelSet.inter labels1 labels2 in
-     let new_choices_opt =
+     let new_choices =
        List.map (fun l ->
            let s = List.assoc l choices1 in
            let r = List.assoc l choices2 in
-           try Some (l, meet_session s r) with
-           | Join_meet_undef -> None)
+           try (l, meet_session s r) with
+           | Join_meet_undef -> raise Join_meet_undef)
          (LabelSet.elements labels3) in
-     let new_choices = remove_none new_choices_opt in
      (* choice set cannot be empty in TyCase *)
      begin match new_choices with
      | [] -> raise Join_meet_undef
