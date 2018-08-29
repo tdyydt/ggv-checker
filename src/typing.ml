@@ -506,7 +506,7 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * IdSet.t =
      assert_disjoint xs ys;     (* Can I put this here? maybe below? *)
      if m = Un then
        (* NOTE: xs, ys need not be empty *)
-       if lin t1 && lin t2 then
+       if un t1 && un t2 then
          (TyProd (Un,t1,t2), IdSet.union xs ys)
        else ty_err "T-PairCons: Linear element in unrestrected pair"
      else (TyProd (Lin,t1,t2), IdSet.union xs ys)
