@@ -348,29 +348,37 @@ let rec bigjoin (tys: ty list) : ty =
 let matching_fun : ty -> mult * ty * ty = function
   | TyFun (m,t,u) -> (m,t,u)
   | TyDyn -> (Lin,TyDyn,TyDyn)
-  | _ -> ty_err "matching error: fun"
+  | _ -> ty_err "MatchingFun"
+  (* | t -> ty_err ("MatchingFun: failure " ^ (string_of_ty t)) *)
 
 let matching_prod : ty -> mult * ty * ty  = function
   | TyProd (m,t,u) -> (m,t,u)
   | TyDyn -> (Lin,TyDyn,TyDyn)
-  | _ -> ty_err "matching error: prod"
+  | _ -> ty_err "MatchingProd"
 
 let matching_send : ty -> ty * session = function
   | TySession (TySend (t,s)) -> (t,s)
   | (TySession TyDC) | TyDyn -> (TyDyn, TyDC)
-  | _ -> ty_err "matching error: send"
+  | _ -> ty_err "MatchingSend"
 
 let matching_receive : ty -> ty * session = function
   | TySession (TyReceive (t,s)) -> (t,s)
   | (TySession TyDC) | TyDyn -> (TyDyn, TyDC)
-  | _ -> ty_err "matching error: receive"
+  | _ -> ty_err "MatchingReceive"
 
-let matching_select (t : ty) (l : label) : (label * session) list =
+(* Check if l is in choices inside matching function *)
+(* returns singleton choice; actually only session is enough *)
+let matching_select (t : ty) (l : label) : (label * session) =
   match t with
-  | TySession (TySelect br) -> br
+  | TySession (TySelect choices) -> begin
+      try
+        let s = List.assoc l choices in (l, s)
+      with
+      | Not_found -> ty_err ("MatchingSelect: Label is not in choices: " ^ l)
+    end
   (* (+){l : TyDC } *)
-  | (TySession TyDC) | TyDyn -> [(l, TyDC)]
-  | _ -> ty_err "matching error: select"
+  | (TySession TyDC) | TyDyn -> (l, TyDC)
+  | _ -> ty_err "MatchingSelect"
 
 (*** type checking ***)
 
@@ -566,17 +574,8 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * IdSet.t =
 
   | SelectExp (l,e) ->
      let t, xs = ty_exp tyenv e in
-     let choices = matching_select t l in
-     begin
-       try
-         (* Check if l is in choices *)
-         (* NOTE: This check can be done within matching_select *)
-         let s = List.assoc l choices in
-         (TySession s, xs)
-       with
-       | Not_found ->
-          ty_err ("T-Select: Label is not in choices: " ^ l)
-     end
+     let (_, s) = matching_select t l in
+     (TySession s, xs)
 
   | CaseExp (e0, branches) ->
      let t, xs = ty_exp tyenv e0 in
