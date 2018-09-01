@@ -15,9 +15,9 @@ let flexiServer =
   fun un (c : &{ neg : ?int.!int.end!
             , add : ?int.?int.!int.end! }) ->
   case c of {
-    neg (c1 : ?int.!int.end!).
+    neg (c1).
       fserve 1 (fun un (x:int) -> -x) c1;
-    add (c1 : ?int.?int.!int.end!).
+    add (c1).
       fserve 2 (fun un (x:int) -> fun un (y:int) -> x + y) c1
   }
 (* in flexiServer *)

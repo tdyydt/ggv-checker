@@ -5,11 +5,11 @@ let computeServer =
   fun un (c : &{ neg : ?int.!int.end!
                , add : ?int.?int.!int.end! }) ->
   case c of {
-    neg (c1 : ?int.!int.end!).
+    neg (c1).
       let v, c2 = receive c1 in
       let c3 = send (-v) c2 in
       close c3;
-    add (c1 : ?int.?int.!int.end!).
+    add (c1).
       let v1, c2 = receive c1 in
       let v2, c3 = receive c2 in
       let c4 = send (v1 + v2) c3 in
