@@ -105,9 +105,10 @@ type exp =
   | ReceiveExp of exp
   (* SelectExp(l,e) => [select l e] *)
   | SelectExp of label * exp
-  (* CaseExp(e,[(l1,x1,s1,e1)]) =>
+  (* optional type annotation *)
+  (* CaseExp(e,[(l1, x1, Some s1, e1)]) =>
    * [case e of { l1 (x1:s1). e1 }] *)
-  | CaseExp of exp * (label * id * session * exp) list
+  | CaseExp of exp * (label * id * session option * exp) list
   | CloseExp of exp
   | WaitExp of exp
 

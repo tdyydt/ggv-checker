@@ -99,9 +99,11 @@ branch:
   (* TODO: PERIOD to RARROW ? *)
   (* l(x:S).e *)
   | l=ID LPAREN x=ID COLON s=session RPAREN PERIOD e=expr
-    { (l,x,s,e) }
-  (* add type annotation S *)
-  (* | l=ID COLON LPAREN x=ID t=ty_annot RPAREN PERIOD e=expr *)
+    { (l, x, Some s, e) }
+  (* rather, l:x.e ?? *)
+  (* l(x).e *)
+  | l=ID LPAREN x=ID RPAREN PERIOD e=expr
+    { (l, x, None, e) }
 
 minus_expr :
   | MINUS e=minus_expr

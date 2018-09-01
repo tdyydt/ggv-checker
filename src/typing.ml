@@ -366,8 +366,8 @@ let matching_receive : ty -> ty * session = function
   | (TySession TyDC) | TyDyn -> (TyDyn, TyDC)
   | _ -> ty_err "MatchingReceive"
 
-(* Check if l is in choices inside matching function *)
-(* returns singleton choice; actually only session is enough *)
+(* Check `if l is in choices' inside matching function *)
+(* label in return value is not necessary *)
 let matching_select (t : ty) (l : label) : (label * session) =
   match t with
   | TySession (TySelect choices) -> begin
@@ -379,6 +379,25 @@ let matching_select (t : ty) (l : label) : (label * session) =
   (* (+){l : TyDC } *)
   | (TySession TyDC) | TyDyn -> (l, TyDC)
   | _ -> ty_err "MatchingSelect"
+
+(* the order of labels are preserved from given ls *)
+let matching_case (t : ty) (ls : label list) : (label * session) list =
+  match t with
+  | TySession (TyCase choices) ->
+     let labelsI = LabelSet.of_list (List.map fst choices) in (* I *)
+     let labelsJ = LabelSet.of_list ls in                     (* J *)
+     if LabelSet.subset labelsI labelsJ then
+       (* use choices for I; use DC for J - I *)
+       List.map (fun l ->
+           try
+             let s = List.assoc l choices in (l, s)
+           with
+           | Not_found -> (l, TyDC)) ls
+     (* I - J is missing branches in case *)
+     else ty_err "MatchingCase: some branches are missing"
+  | (TySession TyDC) | TyDyn ->
+     List.map (fun l -> (l, TyDC)) ls
+  | _ -> ty_err "MatchingCase"
 
 (*** type checking ***)
 
@@ -579,35 +598,42 @@ let rec ty_exp (tyenv : tyenv) (e : exp) : ty * IdSet.t =
 
   | CaseExp (e0, branches) ->
      let t, xs = ty_exp tyenv e0 in
-     (* choices of branches *)
-     let choices = List.map (fun (l,_,s,_) -> (l,s)) branches in
-     if con_sub_ty t (TySession (TyCase choices)) then
-       let (us : ty list), (yss : IdSet.t list) =
-         List.split
-           (List.map (fun (l,x,s,e) ->
-                let u, ys = ty_exp (Environment.add x (TySession s) tyenv) e in
-                if IdSet.mem x ys then
-                  (u, IdSet.remove x ys) (* Uj,Yj *)
-                else ty_err ("T-Case: Unused linear variable: " ^ x))
-              branches)
-       in
-       (* ys' = ys1 = ys2 = ... *)
-       let ys' : IdSet.t =
-         List.fold_left (fun ys_acc ys ->
-             if IdSet.equal ys ys_acc then ys
-             else ty_err ("T-Case: Same linear variables should be used in case branches"))
-           (List.hd yss)        (* use first elem *)
-           yss
-       in
-       begin
-         try
-           let u' = bigjoin us in
-           assert_disjoint xs ys';
-           (u', IdSet.union xs ys')
-         with
-         | Join_meet_undef -> ty_err "T-Case: Join undefined"
-       end
-     else ty_err "T-Case: Not consistent subtype"
+     let ls = List.map (fun (l,_,_,_) -> l) branches in (* = J *)
+     let choices = matching_case t ls in
+
+     (* assume: labels in choices/branches appear in same order *)
+     let (us : ty list), (yss : IdSet.t list) =
+       List.split
+         (List.map (fun ((l,x,s1_opt,e), (l', s2)) ->
+              assert (l = l');
+              (* s1 is the given annotation *)
+              let s = match s1_opt with
+                | Some s1 -> if con_sub_session s2 s1 then s1
+                             else ty_err "T-Case: inconsistent type annotation"
+                | None -> s2
+              in
+              let u, ys = ty_exp (Environment.add x (TySession s) tyenv) e in
+              if IdSet.mem x ys then
+                (u, IdSet.remove x ys) (* Uj,Yj *)
+              else ty_err ("T-Case: Unused linear variable: " ^ x))
+            (List.combine branches choices))
+     in
+     (* ys' = ys1 = ys2 = ... *)
+     let ys' : IdSet.t =
+       List.fold_left (fun ys_acc ys ->
+           if IdSet.equal ys ys_acc then ys
+           else ty_err ("T-Case: Same linear variables should be used in case branches"))
+         (List.hd yss)        (* use first elem *)
+         yss
+     in
+     begin
+       try
+         let u' = bigjoin us in
+         assert_disjoint xs ys';
+         (u', IdSet.union xs ys')
+       with
+       | Join_meet_undef -> ty_err "T-Case: Join undefined"
+     end
 
   | CloseExp e ->
      let t, xs = ty_exp tyenv e in
