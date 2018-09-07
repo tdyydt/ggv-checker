@@ -28,7 +28,7 @@ open Syntax
 %left LT GT EQ LE GE
 %left PLUS MINUS
 %right RARROW                   (* function ty *)
-%left STAR SLASH                (* mult,div *)
+%left STAR SLASH                (* prod ty / mult , div *)
 
 %start toplevel
 %type <Syntax.prog> toplevel
