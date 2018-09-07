@@ -5,6 +5,8 @@
 lexer.ml
 parser.ml
 parser.mli
+parser.automaton
+parser.conflicts
 
 # omake
 *.omc
