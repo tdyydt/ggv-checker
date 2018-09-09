@@ -6,6 +6,7 @@ There are some sample programs in [examples](examples/) directory.
 
 ## Requirements
 
+- OMake
 - Menhir
 
 ## Build instructions
