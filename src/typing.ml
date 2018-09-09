@@ -21,8 +21,8 @@ module LabelSet =
       end
     )
 
-exception Typing_error of string
-let ty_err s = raise (Typing_error s)
+exception Type_error of string
+let ty_err s = raise (Type_error s)
 
 exception Join_meet_undef
 

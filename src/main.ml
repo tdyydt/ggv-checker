@@ -21,8 +21,8 @@ let rec read_check_print () =
      printf "Parser.Error: unexpected token: %s\n" token;
      Lexing.flush_input lexbuf;
      read_check_print ()
-  | Typing_error s -> print_string s;
-                      print_newline ();
-                      read_check_print ()
+  | Type_error s -> print_string s;
+                    print_newline ();
+                    read_check_print ()
 
 let _ = read_check_print ()
