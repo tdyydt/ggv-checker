@@ -170,13 +170,13 @@ and con_session (s : session) (r : session) : bool =
 
 (*** join/meet ***)
 
-let join_mult (m : mult) (n : mult) :mult = match m,n with
+let join_mult (m : mult) (n : mult) : mult = match m,n with
   | Un, Un -> Un
   | Un, Lin -> Lin
   | Lin, Un -> Lin
   | Lin, Lin -> Lin
 
-let meet_mult (m : mult) (n : mult) :mult = match m,n with
+let meet_mult (m : mult) (n : mult) : mult = match m,n with
   | Un, Un -> Un
   | Un, Lin -> Un
   | Lin, Un -> Un
@@ -250,7 +250,7 @@ and join_session (s : session) (r : session) : session = match s,r with
      (* Merge three choice lists; could be empty *)
      begin match new_choices1 @ new_choices2 @ new_choices3 with
      | [] -> raise Join_meet_undef
-     | choices' -> TyCase choices'
+     | _ :: _ as choices' -> TyCase choices'
      end
 
   | TyClose, TyClose -> TyClose
@@ -306,7 +306,7 @@ and meet_session (s : session) (r : session) : session = match s,r with
      (* Merge three choice lists; could be empty *)
      begin match new_choices1 @ new_choices2 @ new_choices3 with
      | [] -> raise Join_meet_undef
-     | choices' -> TySelect choices'
+     | _ :: _ as choices' -> TySelect choices'
      end
 
   | TyCase choices1, TyCase choices2 ->
