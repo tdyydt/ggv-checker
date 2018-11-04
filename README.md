@@ -21,3 +21,4 @@ omake
 
 - Atsushi Igarashi, Peter Thiemann, Vasco T. Vasconcelos, and Philip Wadler.
   Gradual Session Types. ICFP 2017.
+- https://arxiv.org/abs/1809.05649 (the extended version of the paper above)
